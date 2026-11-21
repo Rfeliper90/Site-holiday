@@ -2838,7 +2838,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
     document.querySelectorAll('.btn-virus-scan').forEach((button) => {
         button.addEventListener('click', async () => {
             const confirmed = await showConfirmModal(
-                'O link completo será enviado ao VirusTotal e poderá ficar visível para outras pessoas. Se ele tiver códigos de acesso ou informações privadas, elas também poderão ser compartilhadas. Continue apenas se o link for público. A análise verifica o link, não o arquivo, e não garante que o download seja seguro.',
+                'O VirusTotal verificará o link do download para ajudar a avaliar se ele é confiável. O link poderá ficar visível para outras pessoas; continue apenas se ele for público.',
                 {
                     title: 'Examinar link no VirusTotal?',
                     confirmText: 'Examinar vírus',
@@ -2902,7 +2902,8 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
                     status.textContent = `Atenção: ${suspicious} mecanismo(s) marcaram o link como suspeito.`;
                 } else if (harmless > 0) {
                     status.dataset.state = 'clear';
-                    status.textContent = `Nenhuma detecção conhecida (${harmless} mecanismo(s) não sinalizaram ameaça). Isso não garante segurança.`;
+                    const mechanismLabel = harmless === 1 ? 'mecanismo' : 'mecanismos';
+                    status.textContent = `Nenhuma detecção conhecida em ${harmless} ${mechanismLabel}.`;
                 } else {
                     status.dataset.state = 'unknown';
                     status.textContent = 'O VirusTotal ainda não tem resultado conclusivo para este link.';
