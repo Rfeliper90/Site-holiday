@@ -35,10 +35,6 @@ export function normalizeVirusTotalUrl(value) {
     if (parsed.username || parsed.password) {
         throw new VirusTotalScanError('private_url', 'Esse link parece exigir acesso privado e não pode ser enviado ao VirusTotal.', 400);
     }
-    if (raw.includes('?') || raw.includes('#')) {
-        throw new VirusTotalScanError('private_url', 'Esse link contém informações que podem ser privadas e não será enviado ao VirusTotal.', 400);
-    }
-
     const hostname = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
     if (
         isIP(hostname) ||
