@@ -2837,8 +2837,13 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
 
     document.querySelectorAll('.btn-virus-scan').forEach((button) => {
         button.addEventListener('click', async () => {
-            const confirmed = window.confirm(
-                'Este link será consultado pelo VirusTotal e poderá ficar visível para outras pessoas. Continue apenas se ele for público. A análise verifica o link, não o arquivo, e não garante que o download seja seguro.'
+            const confirmed = await showConfirmModal(
+                'O link completo será enviado ao VirusTotal e poderá ficar visível para outras pessoas. Se ele tiver códigos de acesso ou informações privadas, elas também poderão ser compartilhadas. Continue apenas se o link for público. A análise verifica o link, não o arquivo, e não garante que o download seja seguro.',
+                {
+                    title: 'Examinar link no VirusTotal?',
+                    confirmText: 'Examinar vírus',
+                    cancelText: 'Cancelar'
+                }
             );
             if (!confirmed) return;
 
