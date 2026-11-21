@@ -5299,3 +5299,91 @@ function openAvatarZoomViewer(avatarUrl, nickname = 'Usuário', initialScale = 1
     const slider = modal.querySelector('#zoomSlider');
     const percentDisplay = modal.querySelector('#zoomPercent');
     const resetBtn = modal.querySelector('#resetBtn');
+    const closeBtn = modal.querySelector('#closeZoom');
+
+    // Estado com os valores iniciais passados
+    let currentScale = Number(initialScale) || 1;
+    let offsetX = Number(initialOffsetX) || 50;
+    let offsetY = Number(initialOffsetY) || 50;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // Funções
+    const updateTransform = () => {
+        img.style.left = `${offsetX}%`;
+        img.style.top = `${offsetY}%`;
+        img.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
+    };
+
+    const updatePercent = () => {
+        percentDisplay.textContent = `${Math.round(currentScale * 100)}%`;
+    };
+
+    // Carregar imagem
+    img.src = escapeHtml(avatarUrl);
+
+    // Aplicar transformações iniciais ao carregar
+    img.onload = () => {
+        updateTransform();
+    };
+
+    // Events
+    slider.addEventListener('input', (e) => {
+        currentScale = parseFloat(e.target.value);
+        updateTransform();
+        updatePercent();
+    });
+
+    img.addEventListener('mousedown', (e) => {
+        if (currentScale <= 1) return;
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        img.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+        offsetX += (deltaX / 150);
+        offsetY += (deltaY / 150);
+        offsetX = Math.max(0, Math.min(100, offsetX));
+        offsetY = Math.max(0, Math.min(100, offsetY));
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        updateTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        img.style.cursor = 'grab';
+    });
+
+    resetBtn.addEventListener('click', () => {
+        currentScale = 1;
+        offsetX = 50;
+        offsetY = 50;
+        slider.value = '1';
+        updateTransform();
+        updatePercent();
+    });
+
+    const closeModal = () => {
+        overlay.remove();
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+    });
+
+    // Aplicar valores iniciais
+    slider.value = String(currentScale);
+    updatePercent();
+    updateTransform();
+}
+
+
+
