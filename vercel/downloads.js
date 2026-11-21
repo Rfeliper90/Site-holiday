@@ -2714,8 +2714,14 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
             }
             const isFile = isDownloadFileUrl(linkItem?.url);
             const extraClass = isFile ? ' btn-download-file' : '';
+            const scanTooltipId = `virus-scan-tooltip-${Number(download.id) || 0}-${idx}`;
             return `
-            <a href="${escapeHtml(linkItem.url)}" target="_blank" class="btn-download${extraClass}" style="display: inline-flex; align-items: center; justify-content: center; min-height: 34px; margin: 0; font-size: 12px; line-height: 1;">${escapeHtml(buttonLabel)}</a>
+            <div class="download-link-entry">
+                <a href="${escapeHtml(linkItem.url)}" target="_blank" rel="noopener noreferrer" class="btn-download${extraClass}" style="display: inline-flex; align-items: center; justify-content: center; min-height: 34px; margin: 0; font-size: 12px; line-height: 1;">${escapeHtml(buttonLabel)}</a>
+                <button type="button" class="btn-virus-scan" data-download-id="${Number(download.id) || 0}" data-link-index="${idx}" aria-describedby="${scanTooltipId}">Examinar vírus</button>
+                <span class="virus-scan-tooltip" id="${scanTooltipId}" role="tooltip">Esta verificação consulta o link no VirusTotal.</span>
+                <span class="virus-scan-result" data-state="idle" role="status" aria-live="polite" hidden></span>
+            </div>
             `;
         }).join('');
         const lockPanelLabel = isUnderReview ? 'Aguardando revisão da equipe de moderação...' :
@@ -2828,6 +2834,97 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
 
     syncDescriptionOverflowState(grid);
     requestAnimationFrame(() => syncDescriptionOverflowState(grid));
+
+    document.querySelectorAll('.btn-virus-scan').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const confirmed = window.confirm(
+                'Este link será consultado pelo VirusTotal e poderá ficar visível para outras pessoas. Continue apenas se ele for público. A análise verifica o link, não o arquivo, e não garante que o download seja seguro.'
+            );
+            if (!confirmed) return;
+
+            const item = button.closest('.download-link-entry');
+            const status = item?.querySelector('.virus-scan-result');
+            if (!status) return;
+
+            const originalLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Examinando...';
+            status.hidden = false;
+            status.dataset.state = 'pending';
+            status.textContent = 'Consultando o VirusTotal...';
+
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                const token = typeof AuthAPI !== 'undefined' && typeof AuthAPI.getToken === 'function'
+                    ? AuthAPI.getToken()
+                    : '';
+                if (token) headers.Authorization = `Bearer ${token}`;
+
+                const response = await fetch(`${window.location.origin}/api/virus-scan`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        downloadId: button.dataset.downloadId,
+                        linkIndex: button.dataset.linkIndex,
+                        consent: true
+                    })
+                });
+                let result = null;
+                try {
+                    result = await response.json();
+                } catch {
+                    result = null;
+                }
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Não foi possível examinar este link.');
+                }
+
+                if (result.status === 'pending') {
+                    status.dataset.state = 'pending';
+                    status.textContent = 'Análise solicitada. Aguarde cerca de 1 minuto e examine novamente.';
+                    return;
+                }
+
+                const stats = result.stats || {};
+                const malicious = Number(stats.malicious) || 0;
+                const suspicious = Number(stats.suspicious) || 0;
+                const harmless = Number(stats.harmless) || 0;
+                if (malicious > 0) {
+                    status.dataset.state = 'danger';
+                    status.textContent = `Alerta: ${malicious} mecanismo(s) marcaram o link como malicioso. Não baixe o arquivo.`;
+                } else if (suspicious > 0) {
+                    status.dataset.state = 'warning';
+                    status.textContent = `Atenção: ${suspicious} mecanismo(s) marcaram o link como suspeito.`;
+                } else if (harmless > 0) {
+                    status.dataset.state = 'clear';
+                    status.textContent = `Nenhuma detecção conhecida (${harmless} mecanismo(s) não sinalizaram ameaça). Isso não garante segurança.`;
+                } else {
+                    status.dataset.state = 'unknown';
+                    status.textContent = 'O VirusTotal ainda não tem resultado conclusivo para este link.';
+                }
+
+                try {
+                    const reportUrl = new URL(result.reportUrl);
+                    if (reportUrl.origin === 'https://www.virustotal.com') {
+                        const reportLink = document.createElement('a');
+                        reportLink.href = reportUrl.toString();
+                        reportLink.target = '_blank';
+                        reportLink.rel = 'noopener noreferrer';
+                        reportLink.textContent = 'Abrir relatório';
+                        status.append(' ', reportLink);
+                    }
+                } catch {
+                    // O resultado continua visível se o relatório não tiver um link válido.
+                }
+            } catch (error) {
+                status.dataset.state = 'error';
+                status.textContent = error?.message || 'Falha ao consultar o VirusTotal. Tente novamente.';
+            } finally {
+                button.disabled = false;
+                button.textContent = originalLabel;
+            }
+        });
+    });
 
     // Adicionar event listeners para reações
     document.querySelectorAll('.btn-reaction').forEach(btn => {
@@ -5265,211 +5362,3 @@ function openAvatarZoomViewer(avatarUrl, nickname = 'Usuário', initialScale = 1
     // Criar modal content
     const modal = document.createElement('div');
     modal.style.cssText = `
-        width: min(90vw, 500px);
-        max-height: 80vh;
-        overflow-y: auto;
-        background: linear-gradient(135deg, #161a36 0%, #121b3f 100%);
-        border: 2px solid #6B46C1;
-        border-radius: 12px;
-        padding: 20px;
-        position: relative;
-        box-shadow: 0 25px 60px rgba(0,0,0,0.5);
-    `;
-
-    modal.innerHTML = `
-        <span class="close" id="closeZoom" style="
-            cursor: pointer;
-            font-size: 28px;
-            color: #EC4899;
-            position: absolute;
-            right: 16px;
-            top: 12px;
-            font-weight: 300;
-            user-select: none;
-        ">&times;</span>
-
-        <h2 style="
-            color: #EC4899;
-            text-align: center;
-            margin: 0 0 16px 0;
-            font-size: 18px;
-        ">Zoom do Avatar</h2>
-
-        <div style="
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1;
-            max-width: 320px;
-            margin: 0 auto 16px;
-            border: 2px solid rgba(236,72,153,0.4);
-            border-radius: 12px;
-            overflow: hidden;
-            background: rgba(0,0,0,0.4);
-        ">
-            <img id="zoomImg" alt="Avatar Zoom" style="
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                cursor: grab;
-                user-select: none;
-                left: 50%;
-                top: 50%;
-            ">
-            <div style="
-                position: absolute;
-                inset: 0;
-                border-radius: 50%;
-                border: 2px solid rgba(236, 72, 153, 0.3);
-                pointer-events: none;
-            "></div>
-        </div>
-
-        <div style="
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
-            margin-bottom: 12px;
-        ">
-            <label for="zoomSlider" style="
-                color: #c7d2fe;
-                font-size: 13px;
-                font-weight: 600;
-                white-space: nowrap;
-            ">Zoom</label>
-            <input type="range" id="zoomSlider" min="1" max="3" step="0.01" value="1" style="
-                flex: 1;
-                height: 6px;
-                border-radius: 3px;
-                background: linear-gradient(90deg, #EC4899 0%, #8B5CF6 100%);
-                outline: none;
-                accent-color: #EC4899;
-            ">
-            <span id="zoomPercent" style="
-                color: #EC4899;
-                font-size: 13px;
-                font-weight: 600;
-                min-width: 45px;
-                text-align: right;
-            ">100%</span>
-        </div>
-
-        <button id="resetBtn" style="
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid rgba(236,72,153,0.6);
-            background: rgba(207, 74, 170, 0.15);
-            color: #EC4899;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 13px;
-            transition: all 0.2s;
-            margin-bottom: 12px;
-        ">Redefinir Zoom</button>
-
-        <p style="
-            text-align: center;
-            color: #94a3b8;
-            font-size: 12px;
-            margin: 0;
-        ">Arraste a imagem para ajustar o enquadramento. Use o zoom para ampliar (1x a 3x).</p>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    // Elementos
-    const img = modal.querySelector('#zoomImg');
-    const slider = modal.querySelector('#zoomSlider');
-    const percentDisplay = modal.querySelector('#zoomPercent');
-    const resetBtn = modal.querySelector('#resetBtn');
-    const closeBtn = modal.querySelector('#closeZoom');
-
-    // Estado com os valores iniciais passados
-    let currentScale = Number(initialScale) || 1;
-    let offsetX = Number(initialOffsetX) || 50;
-    let offsetY = Number(initialOffsetY) || 50;
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-
-    // Funções
-    const updateTransform = () => {
-        img.style.left = `${offsetX}%`;
-        img.style.top = `${offsetY}%`;
-        img.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
-    };
-
-    const updatePercent = () => {
-        percentDisplay.textContent = `${Math.round(currentScale * 100)}%`;
-    };
-
-    // Carregar imagem
-    img.src = escapeHtml(avatarUrl);
-
-    // Aplicar transformações iniciais ao carregar
-    img.onload = () => {
-        updateTransform();
-    };
-
-    // Events
-    slider.addEventListener('input', (e) => {
-        currentScale = parseFloat(e.target.value);
-        updateTransform();
-        updatePercent();
-    });
-
-    img.addEventListener('mousedown', (e) => {
-        if (currentScale <= 1) return;
-        isDragging = true;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-        img.style.cursor = 'grabbing';
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const deltaX = e.clientX - dragStartX;
-        const deltaY = e.clientY - dragStartY;
-        offsetX += (deltaX / 150);
-        offsetY += (deltaY / 150);
-        offsetX = Math.max(0, Math.min(100, offsetX));
-        offsetY = Math.max(0, Math.min(100, offsetY));
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-        updateTransform();
-    });
-
-    document.addEventListener('mouseup', () => {
-        isDragging = false;
-        img.style.cursor = 'grab';
-    });
-
-    resetBtn.addEventListener('click', () => {
-        currentScale = 1;
-        offsetX = 50;
-        offsetY = 50;
-        slider.value = '1';
-        updateTransform();
-        updatePercent();
-    });
-
-    const closeModal = () => {
-        overlay.remove();
-    };
-
-    closeBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeModal();
-    });
-
-    // Aplicar valores iniciais
-    slider.value = String(currentScale);
-    updatePercent();
-    updateTransform();
-}
-
-
-
