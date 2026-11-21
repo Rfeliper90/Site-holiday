@@ -2530,3 +2530,121 @@ class AuthAPI {
             });
             return await response.json();
         } catch (error) {
+            console.error('Erro ao desuspender download:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
+    // Remover postagem suspensa
+    static async deleteSuspendedDownload(downloadId) {
+        try {
+            const response = await fetch(`${API_URL}/admin/delete-suspended-download/${downloadId}`, {
+                method: 'DELETE',
+                headers: this.getHeaders(true)
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao deletar download suspensa:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
+    // Enviar postagem suspensa para revisão
+    static async requestDownloadReview(downloadId, reviewMessage) {
+        try {
+            const response = await fetch(`${API_URL}/admin/request-download-review/${downloadId}`, {
+                method: 'POST',
+                headers: this.getHeaders(true),
+                body: JSON.stringify({ message: reviewMessage })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao enviar para revisão:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
+    // Obter postagens suspensas do usuário
+    static async getSuspendedPostsUser() {
+        try {
+            const response = await fetch(`${API_URL}/downloads/suspended`, {
+                method: 'GET',
+                headers: this.getHeaders(true)
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao buscar postagens suspensas:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
+    static async submitSuspendedPostForReview(downloadId) {
+        try {
+            const response = await fetch(`${API_URL}/downloads/${downloadId}/submit-for-review`, {
+                method: 'POST',
+                headers: this.getHeaders(true),
+                body: JSON.stringify({})
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao submeter postagem suspensa para revisão:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
+    static async checkCanSuspendPosts() {
+        try {
+            const response = await fetch(`${API_URL}/admin/check-can-suspend`, {
+                method: 'GET',
+                headers: this.getHeaders(true)
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao verificar permissão de suspensão:', error);
+            return { success: false, canSuspend: false };
+        }
+    }
+
+    static async updateCustomTitle(userId, customTitle, customTitleSubtitle) {
+        try {
+            const response = await fetch(`${API_URL}/users/${userId}/custom-title`, {
+                method: 'PUT',
+                headers: this.getHeaders(true),
+                body: JSON.stringify({ 
+                    customTitle: customTitle || null,
+                    customTitleSubtitle: customTitleSubtitle || null
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao atualizar título customizado:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
+    static async syncPostAchievementRanks() {
+        try {
+            const response = await fetch(`${API_URL}/ranks/sync/post-achievements`, {
+                method: 'POST',
+                headers: this.getHeaders(true)
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao sincronizar conquistas de postagens:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
+    static async syncLikeAchievementRanks() {
+        try {
+            const response = await fetch(`${API_URL}/ranks/sync/like-achievements`, {
+                method: 'POST',
+                headers: this.getHeaders(true)
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao sincronizar conquistas de likes:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+}
