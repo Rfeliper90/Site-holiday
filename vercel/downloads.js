@@ -5362,3 +5362,211 @@ function openAvatarZoomViewer(avatarUrl, nickname = 'Usuário', initialScale = 1
     // Criar modal content
     const modal = document.createElement('div');
     modal.style.cssText = `
+        width: min(90vw, 500px);
+        max-height: 80vh;
+        overflow-y: auto;
+        background: linear-gradient(135deg, #161a36 0%, #121b3f 100%);
+        border: 2px solid #6B46C1;
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    `;
+
+    modal.innerHTML = `
+        <span class="close" id="closeZoom" style="
+            cursor: pointer;
+            font-size: 28px;
+            color: #EC4899;
+            position: absolute;
+            right: 16px;
+            top: 12px;
+            font-weight: 300;
+            user-select: none;
+        ">&times;</span>
+
+        <h2 style="
+            color: #EC4899;
+            text-align: center;
+            margin: 0 0 16px 0;
+            font-size: 18px;
+        ">Zoom do Avatar</h2>
+
+        <div style="
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 320px;
+            margin: 0 auto 16px;
+            border: 2px solid rgba(236,72,153,0.4);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.4);
+        ">
+            <img id="zoomImg" alt="Avatar Zoom" style="
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                cursor: grab;
+                user-select: none;
+                left: 50%;
+                top: 50%;
+            ">
+            <div style="
+                position: absolute;
+                inset: 0;
+                border-radius: 50%;
+                border: 2px solid rgba(236, 72, 153, 0.3);
+                pointer-events: none;
+            "></div>
+        </div>
+
+        <div style="
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 12px;
+        ">
+            <label for="zoomSlider" style="
+                color: #c7d2fe;
+                font-size: 13px;
+                font-weight: 600;
+                white-space: nowrap;
+            ">Zoom</label>
+            <input type="range" id="zoomSlider" min="1" max="3" step="0.01" value="1" style="
+                flex: 1;
+                height: 6px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, #EC4899 0%, #8B5CF6 100%);
+                outline: none;
+                accent-color: #EC4899;
+            ">
+            <span id="zoomPercent" style="
+                color: #EC4899;
+                font-size: 13px;
+                font-weight: 600;
+                min-width: 45px;
+                text-align: right;
+            ">100%</span>
+        </div>
+
+        <button id="resetBtn" style="
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid rgba(236,72,153,0.6);
+            background: rgba(207, 74, 170, 0.15);
+            color: #EC4899;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        ">Redefinir Zoom</button>
+
+        <p style="
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+            margin: 0;
+        ">Arraste a imagem para ajustar o enquadramento. Use o zoom para ampliar (1x a 3x).</p>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Elementos
+    const img = modal.querySelector('#zoomImg');
+    const slider = modal.querySelector('#zoomSlider');
+    const percentDisplay = modal.querySelector('#zoomPercent');
+    const resetBtn = modal.querySelector('#resetBtn');
+    const closeBtn = modal.querySelector('#closeZoom');
+
+    // Estado com os valores iniciais passados
+    let currentScale = Number(initialScale) || 1;
+    let offsetX = Number(initialOffsetX) || 50;
+    let offsetY = Number(initialOffsetY) || 50;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // Funções
+    const updateTransform = () => {
+        img.style.left = `${offsetX}%`;
+        img.style.top = `${offsetY}%`;
+        img.style.transform = `translate(-50%, -50%) scale(${currentScale})`;
+    };
+
+    const updatePercent = () => {
+        percentDisplay.textContent = `${Math.round(currentScale * 100)}%`;
+    };
+
+    // Carregar imagem
+    img.src = escapeHtml(avatarUrl);
+
+    // Aplicar transformações iniciais ao carregar
+    img.onload = () => {
+        updateTransform();
+    };
+
+    // Events
+    slider.addEventListener('input', (e) => {
+        currentScale = parseFloat(e.target.value);
+        updateTransform();
+        updatePercent();
+    });
+
+    img.addEventListener('mousedown', (e) => {
+        if (currentScale <= 1) return;
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        img.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - dragStartX;
+        const deltaY = e.clientY - dragStartY;
+        offsetX += (deltaX / 150);
+        offsetY += (deltaY / 150);
+        offsetX = Math.max(0, Math.min(100, offsetX));
+        offsetY = Math.max(0, Math.min(100, offsetY));
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        updateTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        img.style.cursor = 'grab';
+    });
+
+    resetBtn.addEventListener('click', () => {
+        currentScale = 1;
+        offsetX = 50;
+        offsetY = 50;
+        slider.value = '1';
+        updateTransform();
+        updatePercent();
+    });
+
+    const closeModal = () => {
+        overlay.remove();
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+    });
+
+    // Aplicar valores iniciais
+    slider.value = String(currentScale);
+    updatePercent();
+    updateTransform();
+}
+
+
+
