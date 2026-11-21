@@ -14,11 +14,12 @@ function response(status, payload) {
     };
 }
 
-test('rejects URLs that may contain private tokens or credentials', () => {
-    assert.throws(
-        () => normalizeVirusTotalUrl('https://files.example.org/download?token=private'),
-        (error) => error instanceof VirusTotalScanError && error.code === 'private_url'
-    );
+test('allows public URLs with query parameters', () => {
+    const url = 'https://www.mediafire.com/file/public-id/sample.zip?dkey=public-share-key';
+    assert.equal(normalizeVirusTotalUrl(url), url);
+});
+
+test('rejects URLs that contain credentials or point to private hosts', () => {
     assert.throws(
         () => normalizeVirusTotalUrl('https://user:password@files.example.org/download'),
         (error) => error instanceof VirusTotalScanError && error.code === 'private_url'
