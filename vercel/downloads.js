@@ -1533,14 +1533,16 @@ function syncDownloadUploadPermissionUi() {
             const label = checkbox.closest('label');
             if (label) {
                 label.style.opacity = '0.55';
-                label.title = 'Essa opção está indisponivel no momento';
+                label.removeAttribute('title');
+                bindDownloadUploadUnavailableTooltip(label);
             }
         } else {
             checkbox.disabled = false;
             const label = checkbox.closest('label');
             if (label) {
                 label.style.opacity = '';
-                label.title = '';
+                label.removeAttribute('title');
+                unbindDownloadUploadUnavailableTooltip(label);
             }
         }
     });
@@ -1553,13 +1555,97 @@ function syncDownloadUploadPermissionUi() {
         const hint = row.querySelector('small');
         if (!hint) return;
         if (!canUpload) {
-            hint.textContent = 'Essa opção está indisponivel no momento';
-            hint.style.cssText = 'display:block;width:100%;margin-top:8px;padding:8px 10px;border:1px solid rgba(236,72,153,.55);border-radius:8px;background:rgba(236,72,153,.12);color:#F9A8D4;font-weight:700;';
+            hint.hidden = true;
+            hint.textContent = '';
+            hint.style.cssText = '';
         } else {
             hint.textContent = 'Arquivo até 500MB';
+            hint.hidden = false;
             hint.style.cssText = 'color:rgba(255,255,255,.65);font-weight:600;';
         }
     });
+}
+
+function ensureDownloadUploadUnavailableTooltip() {
+    let tooltip = document.getElementById('downloadUploadUnavailableTooltip');
+    if (tooltip) return tooltip;
+
+    tooltip = document.createElement('div');
+    tooltip.id = 'downloadUploadUnavailableTooltip';
+    tooltip.setAttribute('role', 'tooltip');
+    tooltip.setAttribute('aria-hidden', 'true');
+    tooltip.textContent = 'Essa opção está indisponivel no momento';
+    tooltip.style.cssText = [
+        'position:fixed',
+        'left:0',
+        'top:0',
+        'z-index:12000',
+        'max-width:min(320px,calc(100vw - 24px))',
+        'padding:8px 10px',
+        'border-radius:9px',
+        'border:1px solid rgba(236,72,153,.72)',
+        'background:linear-gradient(145deg,rgba(34,19,79,.96),rgba(14,24,56,.95))',
+        'color:#F3E8FF',
+        'font-size:12px',
+        'line-height:1.35',
+        'font-weight:600',
+        'letter-spacing:.1px',
+        'pointer-events:none',
+        'opacity:0',
+        'transform:translateY(4px) scale(.98)',
+        'transition:opacity .16s ease,transform .16s ease',
+        'box-shadow:0 10px 24px rgba(0,0,0,.45),0 0 18px rgba(236,72,153,.24)',
+        'backdrop-filter:blur(7px)'
+    ].join(';');
+    document.body.appendChild(tooltip);
+    return tooltip;
+}
+
+function showDownloadUploadUnavailableTooltip(label) {
+    const tooltip = ensureDownloadUploadUnavailableTooltip();
+    const rect = label.getBoundingClientRect();
+    tooltip.setAttribute('aria-hidden', 'false');
+    tooltip.style.opacity = '1';
+    tooltip.style.transform = 'translateY(0) scale(1)';
+
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const margin = 12;
+    let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
+    let top = rect.top - tooltip.offsetHeight - 10;
+
+    left = Math.max(margin, Math.min(left, viewportWidth - tooltip.offsetWidth - margin));
+    if (top < margin) top = rect.bottom + 10;
+    top = Math.max(margin, Math.min(top, viewportHeight - tooltip.offsetHeight - margin));
+
+    tooltip.style.left = `${Math.round(left)}px`;
+    tooltip.style.top = `${Math.round(top)}px`;
+}
+
+function hideDownloadUploadUnavailableTooltip() {
+    const tooltip = document.getElementById('downloadUploadUnavailableTooltip');
+    if (!tooltip) return;
+    tooltip.style.opacity = '0';
+    tooltip.style.transform = 'translateY(4px) scale(.98)';
+    tooltip.setAttribute('aria-hidden', 'true');
+}
+
+function bindDownloadUploadUnavailableTooltip(label) {
+    if (!label || label.dataset.downloadUploadTooltipBound === '1') return;
+    label.dataset.downloadUploadTooltipBound = '1';
+    label.addEventListener('mouseenter', () => {
+        if (label.dataset.downloadUploadTooltipBound === '1') showDownloadUploadUnavailableTooltip(label);
+    });
+    label.addEventListener('mouseleave', hideDownloadUploadUnavailableTooltip);
+    label.addEventListener('focusin', () => {
+        if (label.dataset.downloadUploadTooltipBound === '1') showDownloadUploadUnavailableTooltip(label);
+    });
+    label.addEventListener('focusout', hideDownloadUploadUnavailableTooltip);
+}
+
+function unbindDownloadUploadUnavailableTooltip(label) {
+    if (!label) return;
+    delete label.dataset.downloadUploadTooltipBound;
 }
 
 function isDownloadHeartedByViewer(download) {
