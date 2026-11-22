@@ -2493,9 +2493,10 @@ class AuthAPI {
 
     static async getProfileAnimationSettings() {
         try {
-            const response = await fetch(`${API_URL}/users/profile-animation-settings`, {
+            const response = await fetch(withNoCacheParam(`${API_URL}/users/profile-animation-settings`), {
                 method: 'GET',
-                headers: this.getHeaders(true)
+                headers: this.getHeaders(true),
+                cache: 'no-store'
             });
             return await this.parseProfileAnimationSettingsResponse(response);
         } catch (error) {
@@ -2509,7 +2510,8 @@ class AuthAPI {
             const response = await fetch(`${API_URL}/users/profile-animation-settings`, {
                 method: 'PUT',
                 headers: this.getHeaders(true),
-                body: JSON.stringify({ profileAnimationMode })
+                body: JSON.stringify({ profileAnimationMode }),
+                cache: 'no-store'
             });
             return await this.parseProfileAnimationSettingsResponse(response);
         } catch (error) {
