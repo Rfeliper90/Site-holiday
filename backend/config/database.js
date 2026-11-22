@@ -108,6 +108,15 @@ db.serialize(() => {
 
     db.run(`
         INSERT OR IGNORE INTO site_settings (settingKey, settingValue)
+        VALUES ('download_uploads_enabled', '0')
+    `, (err) => {
+        if (err) {
+            console.log('seed download_uploads_enabled:', err.message);
+        }
+    });
+
+    db.run(`
+        INSERT OR IGNORE INTO site_settings (settingKey, settingValue)
         VALUES ('achievement_bg_progression', '')
     `, (err) => {
         if (err) {
@@ -177,6 +186,7 @@ db.serialize(() => {
             manualRankColor TEXT DEFAULT NULL,
             isAdmin BOOLEAN DEFAULT 0,
             canPostDownloads BOOLEAN DEFAULT 1,
+            canUploadDownloads BOOLEAN DEFAULT 0,
             canOrderFixedRanks BOOLEAN DEFAULT 0,
             canAccessAdminPanel BOOLEAN DEFAULT 0,
             adminTabRanks BOOLEAN NOT NULL DEFAULT 0,
@@ -198,6 +208,7 @@ db.serialize(() => {
             canUseAnimatedProfileCustomGif BOOLEAN DEFAULT 0,
             showAdultPosts BOOLEAN DEFAULT 0,
             showFullNameInMiniProfile BOOLEAN DEFAULT 1,
+            profileAnimationMode TEXT NOT NULL DEFAULT 'normal',
             animatedProfileEnabled BOOLEAN DEFAULT 1,
             animatedMiniProfileEnabled BOOLEAN DEFAULT 1,
             animatedDownloadCardEnabled BOOLEAN DEFAULT 0,
@@ -499,6 +510,12 @@ db.serialize(() => {
         } 
     });
 
+    db.run(`ALTER TABLE users ADD COLUMN canUploadDownloads BOOLEAN DEFAULT 0`, (err) => {
+        if (err && !err.message.includes('duplicate column')) {
+            console.log('canUploadDownloads column:', err.message);
+        }
+    });
+
     // Adicionar n�vel de conquista por postagens
     db.run(`ALTER TABLE users ADD COLUMN postageRankLevel INTEGER DEFAULT 0`, (err) => {
         if (err && !err.message.includes('duplicate column')) {
@@ -585,6 +602,11 @@ db.serialize(() => {
         if (err && !err.message.includes('duplicate column')) {
             console.log('showFullNameInMiniProfile column:', err.message);
         } 
+    });
+    db.run(`ALTER TABLE users ADD COLUMN profileAnimationMode TEXT NOT NULL DEFAULT 'normal'`, (err) => {
+        if (err && !err.message.includes('duplicate column')) {
+            console.log('profileAnimationMode column:', err.message);
+        }
     });
     db.run(`ALTER TABLE users ADD COLUMN lastBirthdayNotificationYear INTEGER DEFAULT NULL`, (err) => {
         if (err && !err.message.includes('duplicate column')) {
@@ -1032,6 +1054,56 @@ db.serialize(() => {
     `, (err) => {
         if (err && !err.message.includes('already exists')) {
             console.error('Tabela download_comments:', err.message);
+        }
+    });
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS download_upload_reservations (
+            uploadId TEXT PRIMARY KEY,
+            userId INTEGER NOT NULL,
+            objectKey TEXT NOT NULL UNIQUE,
+            originalName TEXT NOT NULL,
+            contentType TEXT NOT NULL,
+            expectedSize INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'uploaded', 'attached')),
+            downloadId INTEGER DEFAULT NULL,
+            expiresAt INTEGER DEFAULT NULL,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(downloadId) REFERENCES downloads(id) ON DELETE SET NULL
+        )
+    `, (err) => {
+        if (err) {
+            console.error('Tabela download_upload_reservations:', err.message);
+        }
+    });
+
+    db.run(
+        `ALTER TABLE download_upload_reservations
+         ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'`,
+        (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.error('Migração download_upload_reservations.status:', err.message);
+            }
+        }
+    );
+
+    db.run(
+        `ALTER TABLE download_upload_reservations
+         ADD COLUMN downloadId INTEGER DEFAULT NULL`,
+        (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.error('Migração download_upload_reservations.downloadId:', err.message);
+            }
+        }
+    );
+
+    db.run(`
+        CREATE INDEX IF NOT EXISTS idx_download_upload_reservations_expiry
+        ON download_upload_reservations(expiresAt)
+    `, (err) => {
+        if (err) {
+            console.error('Índice download_upload_reservations:', err.message);
         }
     });
 
