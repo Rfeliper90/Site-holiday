@@ -3634,11 +3634,9 @@ function initializeInboxControls() {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('Profile DOMContentLoaded fired');
     console.log('localStorage keys:', Object.keys(localStorage));
-    console.log('localStorage content:', JSON.stringify(localStorage));
 
     const token = AuthAPI.getToken();
     console.log('Token found:', token ? 'YES (length: ' + token.length + ')' : 'NO');
-    console.log('Token value:', token);
     
     if (!token) {
         console.log('Redirecionando para login...');
