@@ -5075,18 +5075,11 @@ function renderRankHistory(history, rankProgress = {}) {
     const currentProgressionForDisplay = eloAtual && String(eloAtual.name || '').trim().toLowerCase() !== 'membro inicial'
         ? eloAtual
         : ALL_RANKS.find(rank => String(rank.name).trim().toLowerCase() === 'membro inicial');
-    const currentProgressionOrder = progressionDisplayOrder.get(
-        String(currentProgressionForDisplay?.name || '').trim().toLowerCase()
-    );
     const completedProgressionEntries = progressionAchievementCards
         .filter((entry) => {
             if (!entry?.achieved || !entry.rank) return false;
             const rankName = String(entry.rank.name || '').trim().toLowerCase();
-            if (rankName === 'membro beta') return false;
-            const rankOrder = progressionDisplayOrder.get(rankName);
-            return currentProgressionOrder === undefined
-                || rankOrder === undefined
-                || rankOrder <= currentProgressionOrder;
+            return rankName !== 'membro beta';
         })
         .map((entry) => ({ rank: entry.rank, achieved: true }));
     (currentCustomRanksForRender || [])
