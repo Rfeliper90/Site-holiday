@@ -1131,8 +1131,8 @@ function normalizeAnimatedProfileGiphyId(value) {
 function buildGiphyEmbedMarkup(value) {
     const gifId = normalizeAnimatedProfileGiphyId(value);
     if (!gifId) return '';
-    const embedUrl = `https://giphy.com/embed/${encodeURIComponent(gifId)}`;
-    return `<iframe class="animated-profile-giphy-embed" src="${embedUrl}" title="GIF do GIPHY" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    const gifUrl = `https://media.giphy.com/media/${encodeURIComponent(gifId)}/giphy.gif`;
+    return `<img class="animated-profile-giphy-embed" src="${gifUrl}" alt="" aria-hidden="true" loading="lazy">`;
 }
 
 function buildAnimatedCardConfig(seedValue, themeValue, visualModeValue, gifUrlValue, giphyIdValue = '') {
