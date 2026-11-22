@@ -1,0 +1,164 @@
+html[data-profile-animation-mode="pause"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+),
+html[data-profile-animation-mode="pause"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+) *,
+html[data-profile-animation-mode="pause"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+)::before,
+html[data-profile-animation-mode="pause"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+)::after,
+html[data-profile-animation-mode="pause"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+) *::before,
+html[data-profile-animation-mode="pause"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+) *::after {
+    animation-play-state: paused !important;
+    transition: none !important;
+}
+
+html[data-profile-animation-mode="off"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+),
+html[data-profile-animation-mode="off"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+) *,
+html[data-profile-animation-mode="off"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+)::before,
+html[data-profile-animation-mode="off"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+)::after,
+html[data-profile-animation-mode="off"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+) *::before,
+html[data-profile-animation-mode="off"] :is(
+    .profile-content,
+    .download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+) *::after {
+    animation: none !important;
+    transition: none !important;
+}
+
+html[data-profile-animation-mode="off"] :is(
+    .download-card,
+    .animated-download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+) {
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+html[data-profile-animation-mode="off"] :is(
+    .animated-download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+) {
+    background-image: none !important;
+    background-color: #1a1a2e !important;
+}
+
+html[data-profile-animation-mode="off"] :is(
+    .profile-tag,
+    .download-user-tag,
+    .mini-profile-tag
+) {
+    animation: none !important;
+    background-image: none !important;
+    background-color: var(--tag-color, #5b5560) !important;
+    box-shadow: none !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+html[data-profile-animation-mode="off"] :is(
+    .animated-download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+)::before,
+html[data-profile-animation-mode="off"] :is(
+    .animated-download-card,
+    .mini-profile-card,
+    .animated-profile-preview-card
+)::after,
+html[data-profile-animation-mode="off"] .profile-content :is(
+    .profile-tag,
+    .profile-avatar-wrap
+)::before,
+html[data-profile-animation-mode="off"] .profile-content :is(
+    .profile-tag,
+    .profile-avatar-wrap
+)::after,
+html[data-profile-animation-mode="off"] :is(
+    .download-card,
+    .mini-profile-card,
+    .profile-content
+) :is(
+    .profile-tag,
+    .download-user-tag,
+    .mini-profile-tag
+)::before,
+html[data-profile-animation-mode="off"] :is(
+    .download-card,
+    .mini-profile-card,
+    .profile-content
+) :is(
+    .profile-tag,
+    .download-user-tag,
+    .mini-profile-tag
+)::after {
+    display: none !important;
+    content: none !important;
+}
+
+html[data-profile-animation-mode="off"] :is(
+    .download-card,
+    .mini-profile-card,
+    .profile-content
+) :is(
+    .animated-profile-giphy-embed,
+    .tag-fx-canvas,
+    .tag-gif
+) {
+    display: none !important;
+}
