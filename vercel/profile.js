@@ -140,6 +140,8 @@ function showCustomEmailPrompt(defaultValue = '') {
 
 let isApplyingNotificationSettings = false;
 let isSavingNotificationSettings = false;
+let isApplyingProfileAnimationSettings = false;
+let isSavingProfileAnimationSettings = false;
 let previousAllNotificationsToggleState = false;
 let inboxNotificationsLoading = false;
 let inboxNotificationsCache = [];
@@ -1628,6 +1630,7 @@ function applyProfileTagFx(el, style, theme) {
 }
 
 function startTagFxLoop() {
+    if (window.ProfileAnimationPreferences?.getMode?.() === 'off') return;
     if (tagFxLoopHandle) return;
     ensureTagFxNoiseCanvas();
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1652,6 +1655,28 @@ function startTagFxLoop() {
 
     tagFxLoopHandle = window.requestAnimationFrame(tick);
 }
+
+function stopTagFxLoop() {
+    if (tagFxLoopHandle !== null) {
+        window.cancelAnimationFrame(tagFxLoopHandle);
+        tagFxLoopHandle = null;
+    }
+
+    tagFxInstances.forEach((instance) => {
+        instance.ctx?.clearRect(0, 0, instance.canvas.width, instance.canvas.height);
+    });
+}
+
+window.addEventListener('profile-animation-mode-change', (event) => {
+    if (event.detail?.mode === 'off') {
+        stopTagFxLoop();
+    } else {
+        startTagFxLoop();
+    }
+    if (!isApplyingProfileAnimationSettings) {
+        syncProfileAnimationControls(event.detail?.mode);
+    }
+});
 
 function resizeTagFxCanvas(instance) {
     const rect = instance.el.getBoundingClientRect();
@@ -3621,6 +3646,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
 
+    const profileAnimationLoad = window.ProfileAnimationPreferences.load().catch((error) => {
+        console.error('Erro ao carregar preferência de animações do perfil:', error);
+        showNotification('Não foi possível carregar a preferência de animações do perfil.', 'error');
+    });
+
     // ===== INICIALIZAR ELEMENTOS DO DOM =====
     orderBtn = document.getElementById('toggleRankOrderBtn');
     orderHint = document.getElementById('rankOrderHint');
@@ -3629,6 +3659,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     console.log('Session ok, loading profile directly...');
     loadProfile();
+    await profileAnimationLoad;
 
     document.querySelectorAll('.tab-btn').forEach((btn) => {
         btn.addEventListener('click', async (event) => {
@@ -3654,6 +3685,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 resetTwoFactorMessages();
                 await loadTwoFactorStatus();
             } else if (tabName === 'advanced-tab') {
+                initializeProfileAnimationControls();
                 initializeNotificationSettingsControls();
                 await loadAdultPostsPreference();
             }
@@ -9847,6 +9879,83 @@ function collectNotificationSettingsFromUI() {
         disableTeamEmailNotifications: Boolean(els.disableTeamEmailNotifications?.checked),
         disableAllNotifications: Boolean(els.disableAllNotifications?.checked)
     };
+}
+
+function getProfileAnimationSettingsElements() {
+    return {
+        pause: document.getElementById('pauseProfileAnimationsToggle'),
+        disable: document.getElementById('disableProfileEffectsToggle')
+    };
+}
+
+function applyProfileAnimationModeToUI(mode) {
+    const normalizedMode = mode === 'pause' || mode === 'off' ? mode : 'normal';
+
+    isApplyingProfileAnimationSettings = true;
+    syncProfileAnimationControls(normalizedMode);
+    window.ProfileAnimationPreferences?.setMode?.(normalizedMode);
+    isApplyingProfileAnimationSettings = false;
+}
+
+function syncProfileAnimationControls(mode) {
+    const els = getProfileAnimationSettingsElements();
+    const normalizedMode = mode === 'pause' || mode === 'off' ? mode : 'normal';
+    if (els.pause) els.pause.checked = normalizedMode === 'pause';
+    if (els.disable) els.disable.checked = normalizedMode === 'off';
+}
+
+async function saveProfileAnimationSettings() {
+    if (isSavingProfileAnimationSettings) return;
+
+    const els = getProfileAnimationSettingsElements();
+    const previousMode = window.ProfileAnimationPreferences?.getMode?.() || 'normal';
+    const requestedMode = els.pause?.checked
+        ? 'pause'
+        : els.disable?.checked
+            ? 'off'
+            : 'normal';
+
+    isSavingProfileAnimationSettings = true;
+    if (els.pause) els.pause.disabled = true;
+    if (els.disable) els.disable.disabled = true;
+
+    try {
+        const result = await AuthAPI.updateProfileAnimationSettings(requestedMode);
+        if (!result?.success) {
+            throw new Error(result?.message || 'Não foi possível salvar a preferência de animações.');
+        }
+
+        applyProfileAnimationModeToUI(result.settings?.profileAnimationMode || requestedMode);
+        showNotification('Preferência de animações salva', 'success');
+    } catch (error) {
+        console.error('Erro ao salvar preferência de animações do perfil:', error);
+        applyProfileAnimationModeToUI(previousMode);
+        showNotification(error?.message || 'Erro ao salvar preferência de animações', 'error');
+    } finally {
+        isSavingProfileAnimationSettings = false;
+        if (els.pause) els.pause.disabled = false;
+        if (els.disable) els.disable.disabled = false;
+    }
+}
+
+function initializeProfileAnimationControls() {
+    const els = getProfileAnimationSettingsElements();
+    if (!els.pause || !els.disable) return;
+
+    applyProfileAnimationModeToUI(window.ProfileAnimationPreferences?.getMode?.() || 'normal');
+
+    [els.pause, els.disable].forEach((input) => {
+        if (input.dataset.boundProfileAnimation === '1') return;
+        input.dataset.boundProfileAnimation = '1';
+        input.addEventListener('change', async () => {
+            if (isApplyingProfileAnimationSettings || isSavingProfileAnimationSettings) return;
+            if (input.checked) {
+                if (input === els.pause) els.disable.checked = false;
+                else els.pause.checked = false;
+            }
+            await saveProfileAnimationSettings();
+        });
+    });
 }
 
 function applyNotificationSettingsToUI(settings) {
