@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import validator from 'validator';
@@ -768,11 +768,11 @@ async function getHighestOwnedProgressionRank(userId, fallbackRank = null) {
 async function buildFixedProfileRanks(userId, rankComplete, userHasBetaRank = false) {
     const fixedRanks = [];
     
-    const autoDisplayRank = (rankComplete?.automaticCompleted || rankComplete?.automatic)
+    const autoDisplayRank = (rankComplete?.automatic || rankComplete?.automaticCompleted)
         ? {
             id: FIXED_AUTO_RANK_KEY,
-            ...(rankComplete?.automaticCompleted || rankComplete?.automatic),
-            description: (rankComplete?.automaticCompleted || rankComplete?.automatic)?.description || 'Conquista automática concluída',
+            ...(rankComplete?.automatic || rankComplete?.automaticCompleted),
+            description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'Conquista automática atual',
             customText: '',
             backgroundImage: null,
             isVisible: 0,
