@@ -62,6 +62,14 @@
     min-height: 470px;
 }
 
+.download-card.virus-scan-flagged {
+    height: auto;
+}
+
+.download-card.virus-scan-flagged .download-content {
+    flex: 0 0 auto;
+}
+
 .animated-download-card {
     position: relative;
     overflow: hidden;
@@ -733,6 +741,35 @@
     .mini-profile-tag.tag-animated-border,
     .download-user-tag.tag-animated-border {
         animation: none;
+    }
+}
+
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+    body {
+        background-attachment: scroll;
+    }
+
+    .animated-background,
+    .animated-background::before,
+    .animated-background::after,
+    .animated-background *,
+    .animated-background *::before,
+    .animated-background *::after,
+    .header-content h1,
+    .animated-download-card,
+    .animated-download-card::before,
+    .animated-download-card::after {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .animated-download-card::after {
+        mix-blend-mode: normal;
+    }
+
+    .download-card {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 470px;
     }
 }
 
