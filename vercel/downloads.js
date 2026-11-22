@@ -2850,6 +2850,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
             const item = button.closest('.download-link-entry');
             const status = item?.querySelector('.virus-scan-result');
             if (!status) return;
+            const card = button.closest('.download-card');
 
             const originalLabel = button.textContent;
             button.disabled = true;
@@ -2894,6 +2895,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
                 const malicious = Number(stats.malicious) || 0;
                 const suspicious = Number(stats.suspicious) || 0;
                 const harmless = Number(stats.harmless) || 0;
+                card?.classList.toggle('virus-scan-flagged', malicious > 0 || suspicious > 0);
                 if (malicious > 0) {
                     status.dataset.state = 'danger';
                     status.textContent = `Alerta: ${malicious} mecanismo(s) marcaram o link como malicioso. Baixe por sua conta e risco.`;
