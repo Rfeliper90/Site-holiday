@@ -2497,7 +2497,7 @@ async function handleVirusTotalFileScan(button) {
 
     const confirmed = await showThemedConfirm({
         title: 'Enviar arquivo ao VirusTotal?',
-        message: 'O VirusTotal analisará uma cópia do arquivo, mas o resultado é apenas um indicativo: detecções isoladas podem ser falso positivo. Se apenas a URL tiver sido analisada, isso avalia o endereço e seus redirecionamentos, não necessariamente o conteúdo do jogo. Confira o relatório antes de decidir. O arquivo enviado poderá ficar acessível a terceiros; prossiga apenas se ele for público e nunca envie arquivos privados, pessoais ou confidenciais.',
+        message: 'O VirusTotal analisará uma cópia do arquivo associado ao link. Uma ou poucas detecções podem ser falso positivo e não provam, por si só, que o arquivo seja malicioso. Se o relatório analisar apenas a URL, ele avalia o endereço e seus redirecionamentos, não necessariamente o conteúdo do jogo. Confira o relatório antes de decidir. O arquivo enviado poderá ficar acessível a terceiros; prossiga apenas se ele for público e nunca envie arquivos privados, pessoais ou confidenciais.',
         confirmText: 'Enviar arquivo',
         cancelText: 'Cancelar'
     });
@@ -2546,8 +2546,13 @@ async function handleVirusTotalFileScan(button) {
             if (stats) {
                 const malicious = Number(stats.malicious) || 0;
                 const suspicious = Number(stats.suspicious) || 0;
+                const findingText = malicious && suspicious
+                    ? `${malicious} mecanismo(s) marcaram o link como malicioso e ${suspicious} como suspeito`
+                    : malicious
+                        ? `${malicious} mecanismo(s) marcaram o link como malicioso`
+                        : `${suspicious} mecanismo(s) marcaram o link como suspeito`;
                 const resultText = malicious || suspicious
-                    ? `Alerta: ${malicious} mecanismo(s) marcaram o arquivo como malicioso e ${suspicious} como suspeito. Baixe por risco próprio.`
+                    ? `Alerta: ${findingText}. Baixe por sua conta e risco.`
                     : 'Nenhuma detecção nesta análise; isso não garante que o arquivo seja seguro.';
                 setStatus(malicious || suspicious ? 'detected' : 'completed', resultText);
             } else {
