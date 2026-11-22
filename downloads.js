@@ -3,6 +3,7 @@ let allDownloads = [];
 let userCanPost = false;
 let userCanManageDownloads = false;
 let userCanSuspendPosts = false;
+let globalDownloadUploadsEnabled = false;
 let showingFavoritesOnly = false;
 let filteredDownloadsCache = [];
 let currentDownloadsPage = 1;
@@ -1130,8 +1131,8 @@ function normalizeAnimatedProfileGiphyId(value) {
 function buildGiphyEmbedMarkup(value) {
     const gifId = normalizeAnimatedProfileGiphyId(value);
     if (!gifId) return '';
-    const embedUrl = `https://giphy.com/embed/${encodeURIComponent(gifId)}`;
-    return `<iframe class="animated-profile-giphy-embed" src="${embedUrl}" title="GIF do GIPHY" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    const gifUrl = `https://media.giphy.com/media/${encodeURIComponent(gifId)}/giphy.gif`;
+    return `<img class="animated-profile-giphy-embed" src="${gifUrl}" alt="" aria-hidden="true" loading="lazy">`;
 }
 
 function buildAnimatedCardConfig(seedValue, themeValue, visualModeValue, gifUrlValue, giphyIdValue = '') {
@@ -1370,7 +1371,7 @@ function syncPostLinkRowMode(row) {
     if (!row) return;
     const useLinkToggle = row.querySelector('.downloadUseLink');
     const useFileToggle = row.querySelector('.downloadUseFile');
-    if (!Boolean(currentUser?.canUploadDownloads) && useFileToggle) {
+    if (!Boolean(globalDownloadUploadsEnabled) && useFileToggle) {
         useFileToggle.checked = false;
         useFileToggle.disabled = true;
     }
@@ -1523,7 +1524,7 @@ function syncPostButtonAvailability() {
 }
 
 function syncDownloadUploadPermissionUi() {
-    const canUpload = Boolean(currentUser?.canUploadDownloads);
+    const canUpload = Boolean(globalDownloadUploadsEnabled);
 
     document.querySelectorAll('.downloadUseFile, .editDownloadUseFile').forEach((checkbox) => {
         if (!canUpload) {
@@ -1532,14 +1533,16 @@ function syncDownloadUploadPermissionUi() {
             const label = checkbox.closest('label');
             if (label) {
                 label.style.opacity = '0.55';
-                label.title = 'Envio de arquivos desativado.';
+                label.removeAttribute('title');
+                bindDownloadUploadUnavailableTooltip(label);
             }
         } else {
             checkbox.disabled = false;
             const label = checkbox.closest('label');
             if (label) {
                 label.style.opacity = '';
-                label.title = '';
+                label.removeAttribute('title');
+                unbindDownloadUploadUnavailableTooltip(label);
             }
         }
     });
@@ -1547,6 +1550,102 @@ function syncDownloadUploadPermissionUi() {
     document.querySelectorAll('.download-file-picker, .edit-download-file-picker').forEach((picker) => {
         if (!canUpload) picker.hidden = true;
     });
+
+    document.querySelectorAll('.download-upload-row').forEach((row) => {
+        const hint = row.querySelector('small');
+        if (!hint) return;
+        if (!canUpload) {
+            hint.hidden = true;
+            hint.textContent = '';
+            hint.style.cssText = '';
+        } else {
+            hint.textContent = 'Arquivo até 500MB';
+            hint.hidden = false;
+            hint.style.cssText = 'color:rgba(255,255,255,.65);font-weight:600;';
+        }
+    });
+}
+
+function ensureDownloadUploadUnavailableTooltip() {
+    let tooltip = document.getElementById('downloadUploadUnavailableTooltip');
+    if (tooltip) return tooltip;
+
+    tooltip = document.createElement('div');
+    tooltip.id = 'downloadUploadUnavailableTooltip';
+    tooltip.setAttribute('role', 'tooltip');
+    tooltip.setAttribute('aria-hidden', 'true');
+    tooltip.textContent = 'Essa opção está indisponivel no momento';
+    tooltip.style.cssText = [
+        'position:fixed',
+        'left:0',
+        'top:0',
+        'z-index:12000',
+        'max-width:min(320px,calc(100vw - 24px))',
+        'padding:8px 10px',
+        'border-radius:9px',
+        'border:1px solid rgba(236,72,153,.72)',
+        'background:linear-gradient(145deg,rgba(34,19,79,.96),rgba(14,24,56,.95))',
+        'color:#F3E8FF',
+        'font-size:12px',
+        'line-height:1.35',
+        'font-weight:600',
+        'letter-spacing:.1px',
+        'pointer-events:none',
+        'opacity:0',
+        'transform:translateY(4px) scale(.98)',
+        'transition:opacity .16s ease,transform .16s ease',
+        'box-shadow:0 10px 24px rgba(0,0,0,.45),0 0 18px rgba(236,72,153,.24)',
+        'backdrop-filter:blur(7px)'
+    ].join(';');
+    document.body.appendChild(tooltip);
+    return tooltip;
+}
+
+function showDownloadUploadUnavailableTooltip(label) {
+    const tooltip = ensureDownloadUploadUnavailableTooltip();
+    const rect = label.getBoundingClientRect();
+    tooltip.setAttribute('aria-hidden', 'false');
+    tooltip.style.opacity = '1';
+    tooltip.style.transform = 'translateY(0) scale(1)';
+
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const margin = 12;
+    let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
+    let top = rect.top - tooltip.offsetHeight - 10;
+
+    left = Math.max(margin, Math.min(left, viewportWidth - tooltip.offsetWidth - margin));
+    if (top < margin) top = rect.bottom + 10;
+    top = Math.max(margin, Math.min(top, viewportHeight - tooltip.offsetHeight - margin));
+
+    tooltip.style.left = `${Math.round(left)}px`;
+    tooltip.style.top = `${Math.round(top)}px`;
+}
+
+function hideDownloadUploadUnavailableTooltip() {
+    const tooltip = document.getElementById('downloadUploadUnavailableTooltip');
+    if (!tooltip) return;
+    tooltip.style.opacity = '0';
+    tooltip.style.transform = 'translateY(4px) scale(.98)';
+    tooltip.setAttribute('aria-hidden', 'true');
+}
+
+function bindDownloadUploadUnavailableTooltip(label) {
+    if (!label || label.dataset.downloadUploadTooltipBound === '1') return;
+    label.dataset.downloadUploadTooltipBound = '1';
+    label.addEventListener('mouseenter', () => {
+        if (label.dataset.downloadUploadTooltipBound === '1') showDownloadUploadUnavailableTooltip(label);
+    });
+    label.addEventListener('mouseleave', hideDownloadUploadUnavailableTooltip);
+    label.addEventListener('focusin', () => {
+        if (label.dataset.downloadUploadTooltipBound === '1') showDownloadUploadUnavailableTooltip(label);
+    });
+    label.addEventListener('focusout', hideDownloadUploadUnavailableTooltip);
+}
+
+function unbindDownloadUploadUnavailableTooltip(label) {
+    if (!label) return;
+    delete label.dataset.downloadUploadTooltipBound;
 }
 
 function isDownloadHeartedByViewer(download) {
@@ -1696,6 +1795,17 @@ function setupFormatHelpTooltip() {
 }
 
 // Carregar usuário autenticado ao abrir página
+async function loadGlobalDownloadUploadsSetting() {
+    try {
+        const response = await AuthAPI.getDownloadUploadSettings();
+        globalDownloadUploadsEnabled = response?.success === true && response.enabled === true;
+        syncDownloadUploadPermissionUi();
+    } catch {
+        globalDownloadUploadsEnabled = false;
+        syncDownloadUploadPermissionUi();
+    }
+}
+
 async function loadCurrentUser() {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -2456,7 +2566,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
         };
 
         if (rankComplete && !hasFinalDisplayRanks) {
-            const authorAutoRank = rankComplete.automaticCompleted || rankComplete.automatic || null;
+            const authorAutoRank = rankComplete.automatic || rankComplete.automaticCompleted || null;
             if (rankComplete.current && shouldIncludeRank(rankComplete.current)) {
                 sourceRanks.push(rankComplete.current);
             }
@@ -2604,8 +2714,14 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
             }
             const isFile = isDownloadFileUrl(linkItem?.url);
             const extraClass = isFile ? ' btn-download-file' : '';
+            const scanTooltipId = `virus-scan-tooltip-${Number(download.id) || 0}-${idx}`;
             return `
-            <a href="${escapeHtml(linkItem.url)}" target="_blank" class="btn-download${extraClass}" style="display: inline-flex; align-items: center; justify-content: center; min-height: 34px; margin: 0; font-size: 12px; line-height: 1;">${escapeHtml(buttonLabel)}</a>
+            <div class="download-link-entry">
+                <a href="${escapeHtml(linkItem.url)}" target="_blank" rel="noopener noreferrer" class="btn-download${extraClass}" style="display: inline-flex; align-items: center; justify-content: center; min-height: 34px; margin: 0; font-size: 12px; line-height: 1;">${escapeHtml(buttonLabel)}</a>
+                <button type="button" class="btn-virus-scan" data-download-id="${Number(download.id) || 0}" data-link-index="${idx}" aria-describedby="${scanTooltipId}">Examinar vírus</button>
+                <span class="virus-scan-tooltip" id="${scanTooltipId}" role="tooltip">Esta verificação consulta o link no VirusTotal.</span>
+                <span class="virus-scan-result" data-state="idle" role="status" aria-live="polite" hidden></span>
+            </div>
             `;
         }).join('');
         const lockPanelLabel = isUnderReview ? 'Aguardando revisão da equipe de moderação...' :
@@ -2718,6 +2834,103 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
 
     syncDescriptionOverflowState(grid);
     requestAnimationFrame(() => syncDescriptionOverflowState(grid));
+
+    document.querySelectorAll('.btn-virus-scan').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const confirmed = await showConfirmModal(
+                'O VirusTotal verificará o link do download para ajudar a avaliar se ele é confiável. O link poderá ficar visível para outras pessoas; continue apenas se ele for público.',
+                {
+                    title: 'Examinar link no VirusTotal?',
+                    confirmText: 'Examinar vírus',
+                    cancelText: 'Cancelar'
+                }
+            );
+            if (!confirmed) return;
+
+            const item = button.closest('.download-link-entry');
+            const status = item?.querySelector('.virus-scan-result');
+            if (!status) return;
+
+            const originalLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Examinando...';
+            status.hidden = false;
+            status.dataset.state = 'pending';
+            status.textContent = 'Consultando o VirusTotal...';
+
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                const token = typeof AuthAPI !== 'undefined' && typeof AuthAPI.getToken === 'function'
+                    ? AuthAPI.getToken()
+                    : '';
+                if (token) headers.Authorization = `Bearer ${token}`;
+
+                const response = await fetch(`${window.location.origin}/api/virus-scan`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        downloadId: button.dataset.downloadId,
+                        linkIndex: button.dataset.linkIndex,
+                        consent: true
+                    })
+                });
+                let result = null;
+                try {
+                    result = await response.json();
+                } catch {
+                    result = null;
+                }
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Não foi possível examinar este link.');
+                }
+
+                if (result.status === 'pending') {
+                    status.dataset.state = 'pending';
+                    status.textContent = 'Análise solicitada. Aguarde cerca de 1 minuto e examine novamente.';
+                    return;
+                }
+
+                const stats = result.stats || {};
+                const malicious = Number(stats.malicious) || 0;
+                const suspicious = Number(stats.suspicious) || 0;
+                const harmless = Number(stats.harmless) || 0;
+                if (malicious > 0) {
+                    status.dataset.state = 'danger';
+                    status.textContent = `Alerta: ${malicious} mecanismo(s) marcaram o link como malicioso. Não baixe o arquivo.`;
+                } else if (suspicious > 0) {
+                    status.dataset.state = 'warning';
+                    status.textContent = `Atenção: ${suspicious} mecanismo(s) marcaram o link como suspeito.`;
+                } else if (harmless > 0) {
+                    status.dataset.state = 'clear';
+                    const mechanismLabel = harmless === 1 ? 'mecanismo' : 'mecanismos';
+                    status.textContent = `Nenhuma detecção conhecida em ${harmless} ${mechanismLabel}.`;
+                } else {
+                    status.dataset.state = 'unknown';
+                    status.textContent = 'O VirusTotal ainda não tem resultado conclusivo para este link.';
+                }
+
+                try {
+                    const reportUrl = new URL(result.reportUrl);
+                    if (reportUrl.origin === 'https://www.virustotal.com') {
+                        const reportLink = document.createElement('a');
+                        reportLink.href = reportUrl.toString();
+                        reportLink.target = '_blank';
+                        reportLink.rel = 'noopener noreferrer';
+                        reportLink.textContent = 'Abrir relatório';
+                        status.append(' ', reportLink);
+                    }
+                } catch {
+                    // O resultado continua visível se o relatório não tiver um link válido.
+                }
+            } catch (error) {
+                status.dataset.state = 'error';
+                status.textContent = error?.message || 'Falha ao consultar o VirusTotal. Tente novamente.';
+            } finally {
+                button.disabled = false;
+                button.textContent = originalLabel;
+            }
+        });
+    });
 
     // Adicionar event listeners para reações
     document.querySelectorAll('.btn-reaction').forEach(btn => {
@@ -4082,11 +4295,11 @@ function showEditDownloadForm(download) {
                     }
 
                     const file = entry.file;
-                    if (!Boolean(currentUser?.canUploadDownloads)) {
-                        throw new Error('Envio de arquivos está desativado para sua conta.');
+                    if (!Boolean(globalDownloadUploadsEnabled)) {
+                        throw new Error('Essa opção está indisponivel no momento');
                     }
-                    if (!Boolean(currentUser?.canUploadDownloads)) {
-                        throw new Error('Envio de arquivos está desativado para sua conta.');
+                    if (!Boolean(globalDownloadUploadsEnabled)) {
+                        throw new Error('Essa opção está indisponivel no momento');
                     }
                     if (Number(file?.size || 0) > MAX_DOWNLOAD_FILE_BYTES) {
                         throw new Error('Arquivo muito grande. Limite de 500MB para uploads de download.');
@@ -4762,6 +4975,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupPostAdvancedOptionsToggle();
     syncAdultPostOptionVisibility();
     await loadCurrentUser();
+    await loadGlobalDownloadUploadsSetting();
     syncFavoritesToggleButton();
     syncPostButtonAvailability();
     await loadDownloads();
