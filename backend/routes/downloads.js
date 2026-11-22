@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -118,13 +118,14 @@ const MAX_DOWNLOAD_UPLOAD_BYTES = Number(process.env.MAX_DOWNLOAD_UPLOAD_BYTES) 
     ? Number(process.env.MAX_DOWNLOAD_UPLOAD_BYTES)
     : 500 * 1024 * 1024; // 500MB
 const ALLOWED_DOWNLOAD_FILE_EXTS = new Set([
-    '.apk', '.exe', '.msi', '.zip', '.rar', '.7z',
+    '.apk', '.exe', '.msi', '.zip', '.rar', '.7z', '.war',
     '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
     '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
     '.mp3', '.mp4', '.iso'
 ]);
 const ALLOWED_DOWNLOAD_FILE_MIMES = new Set([
     'application/vnd.android.package-archive',
+    'application/java-archive',
     'application/x-msdownload',
     'application/x-msdos-program',
     'application/x-dosexec',
@@ -235,6 +236,7 @@ const DOWNLOAD_UPLOAD_EXTENSION_FORMAT_MAP = {
     '.zip': 'zip',
     '.rar': 'rar',
     '.7z': '7z',
+    '.war': 'software',
     '.pdf': 'pdf',
     '.doc': 'doc',
     '.docx': 'doc',
@@ -701,11 +703,11 @@ async function getHighestOwnedProgressionRank(userId, fallbackRank = null) {
 async function buildFixedProfileRanks(userId, rankComplete, userHasBetaRank = false) {
     const fixedRanks = [];
     
-    const autoDisplayRank = (rankComplete?.automaticCompleted || rankComplete?.automatic)
+    const autoDisplayRank = (rankComplete?.automatic || rankComplete?.automaticCompleted)
         ? {
             id: FIXED_AUTO_RANK_KEY,
-            ...(rankComplete?.automaticCompleted || rankComplete?.automatic),
-            description: (rankComplete?.automaticCompleted || rankComplete?.automatic)?.description || 'Conquista automática concluída',
+            ...(rankComplete?.automatic || rankComplete?.automaticCompleted),
+            description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'Conquista automática atual',
             customText: '',
             backgroundImage: null,
             isVisible: 0,
@@ -861,8 +863,8 @@ export async function getProfileDisplayRanks(userId, rankComplete) {
         return true;
     });
 
-    const autoDisplayRank = rankComplete?.automaticCompleted
-        || rankComplete?.automatic
+    const autoDisplayRank = rankComplete?.automatic
+        || rankComplete?.automaticCompleted
         || (rankComplete?.current?.isCustom !== true ? rankComplete?.current : null)
         || null;
     const autoRankName = String(autoDisplayRank?.name || '').trim();
@@ -1355,8 +1357,8 @@ router.get('/user-profile/:userId', async (req, res) => {
         
         // Ordem de exibição do perfil (mesma do /profile, incluindo fixos)
         const displayRanks = await getProfileDisplayRanks(userId, rankComplete);
-        const autoDisplayRank = rankComplete?.automaticCompleted
-            || rankComplete?.automatic
+        const autoDisplayRank = rankComplete?.automatic
+            || rankComplete?.automaticCompleted
             || (rankComplete?.current?.isCustom !== true ? rankComplete?.current : null)
             || null;
         
@@ -1495,7 +1497,7 @@ router.get('/list/with-ranks', async (req, res) => {
                     authorDisplayRanks.push(rankComplete.current);
                 }
             }
-            const authorAutoRank = rankComplete?.automaticCompleted || rankComplete?.automatic || null;
+            const authorAutoRank = rankComplete?.automatic || rankComplete?.automaticCompleted || null;
             if (!hasAnySelectedRanks &&
                 authorAutoRank &&
                 String(authorAutoRank.name || '').trim() &&
