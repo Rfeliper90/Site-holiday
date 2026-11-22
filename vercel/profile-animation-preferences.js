@@ -17,7 +17,7 @@
 
     async function load() {
         if (loadPromise) return loadPromise;
-        if (!window.AuthAPI || !AuthAPI.getToken()) {
+        if (typeof AuthAPI === 'undefined' || !AuthAPI.getToken()) {
             return applyMode('normal');
         }
 
