@@ -5,6 +5,24 @@ import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
+import {
+    ALLOWED_DOWNLOAD_FILE_EXTS,
+    DOWNLOAD_UPLOAD_EXTENSION_FORMAT_MAP,
+    DOWNLOAD_UPLOAD_RESERVATION_TTL_MS,
+    DOWNLOAD_STORAGE_CAP_BYTES,
+    MAX_DOWNLOAD_UPLOAD_BYTES,
+    createDownloadObjectKey,
+    createDownloadUploadId,
+    createPresignedDownloadRead,
+    createPresignedDownloadUpload,
+    deleteDownloadObject,
+    getDownloadUploadMetadata,
+    openDownloadObjectForScan,
+    inspectDownloadObject,
+    isValidDownloadUploadId,
+    listStoredDownloadObjects,
+    sanitizeDownloadFilename
+} from '../utils/r2-download-storage.js';
 import Download from '../models/Download.js';
 import User from '../models/User.js';
 import Rank from '../models/Rank.js';
@@ -13,11 +31,25 @@ import DownloadComment from '../models/DownloadComment.js';
 import Notification from '../models/Notification.js';
 import AchievementNotification from '../models/AchievementNotification.js';
 import { protect } from '../middleware/auth.js';
-import { commentRateLimiter, reactionRateLimiter, postRateLimiter } from '../middleware/rate-limit.js';
+import {
+    commentRateLimiter,
+    downloadUploadRateLimiter,
+    downloadFileVirusScanRateLimiter,
+    downloadFileVirusScanStatusRateLimiter,
+    reactionRateLimiter,
+    postRateLimiter
+} from '../middleware/rate-limit.js';
+import {
+    createVirusTotalFileScanner,
+    VirusTotalFileScanError
+} from '../utils/virustotal-file-scan.js';
 import { getJwtSecret } from '../config/jwt-secret.js';
 import db from '../config/database.js';
 
 const router = express.Router();
+const virusTotalFileScanner = createVirusTotalFileScanner({
+    openFile: openDownloadObjectForScan
+});
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -114,15 +146,6 @@ const ALLOWED_ANIMATED_VISUAL_MODES = new Set(['theme', 'gif']);
 const COMMENT_ATTACHMENTS_DIR = path.join(__dirname, '../../uploads/comment-files');
 const MAX_COMMENT_ATTACHMENT_BYTES = 500 * 1024 * 1024; // 500MB
 const DOWNLOAD_FILES_DIR = path.join(__dirname, '../../uploads/download-files');
-const MAX_DOWNLOAD_UPLOAD_BYTES = Number(process.env.MAX_DOWNLOAD_UPLOAD_BYTES) > 0
-    ? Number(process.env.MAX_DOWNLOAD_UPLOAD_BYTES)
-    : 500 * 1024 * 1024; // 500MB
-const ALLOWED_DOWNLOAD_FILE_EXTS = new Set([
-    '.apk', '.exe', '.msi', '.zip', '.rar', '.7z', '.war',
-    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
-    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
-    '.mp3', '.mp4', '.iso'
-]);
 const ALLOWED_DOWNLOAD_FILE_MIMES = new Set([
     'application/vnd.android.package-archive',
     'application/java-archive',
@@ -228,33 +251,6 @@ const downloadFileUpload = multer({
         cb(new Error('Tipo de arquivo não suportado para upload de download.'));
     }
 });
-
-const DOWNLOAD_UPLOAD_EXTENSION_FORMAT_MAP = {
-    '.apk': 'apk',
-    '.exe': 'exe',
-    '.msi': 'msi',
-    '.zip': 'zip',
-    '.rar': 'rar',
-    '.7z': '7z',
-    '.war': 'software',
-    '.pdf': 'pdf',
-    '.doc': 'doc',
-    '.docx': 'doc',
-    '.xls': 'xls',
-    '.xlsx': 'xls',
-    '.ppt': 'ppt',
-    '.pptx': 'ppt',
-    '.txt': 'txt',
-    '.jpg': 'jpg',
-    '.jpeg': 'jpg',
-    '.png': 'png',
-    '.gif': 'gif',
-    '.webp': 'webp',
-    '.svg': 'svg',
-    '.mp3': 'mp3',
-    '.mp4': 'mp4',
-    '.iso': 'iso'
-};
 
 function buildDownloadFilePayload(file, req) {
     if (!file) return null;
@@ -707,7 +703,7 @@ async function buildFixedProfileRanks(userId, rankComplete, userHasBetaRank = fa
         ? {
             id: FIXED_AUTO_RANK_KEY,
             ...(rankComplete?.automatic || rankComplete?.automaticCompleted),
-            description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'Conquista automática atual',
+            description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'Conquista automática concluída',
             customText: '',
             backgroundImage: null,
             isVisible: 0,
@@ -871,25 +867,50 @@ export async function getProfileDisplayRanks(userId, rankComplete) {
     const autoRankNameKey = autoRankName.normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
-    const hasAutoRankAlready = autoRankNameKey
-        && finalOrdered.some((rank) => String(rank?.name || '').trim().normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase() === autoRankNameKey);
+    const betaDisplayRank = finalOrdered.find((rank) =>
+        String(rank?.name || '').trim().toLowerCase() === 'membro beta'
+    );
+    if (hasBetaOverrideSelected && betaDisplayRank) {
+        const remainingRanks = finalOrdered.filter((rank) =>
+            String(rank?.name || '').trim().toLowerCase() !== 'membro beta'
+                && String(rank?.id || '').trim() !== FIXED_AUTO_RANK_KEY
+        );
+        return [...remainingRanks, betaDisplayRank];
+    }
 
-    if (!hasBetaOverrideSelected && autoRankName && !hasAutoRankAlready) {
-        finalOrdered.unshift({
-            id: FIXED_AUTO_RANK_KEY,
+    const fixedAutoRank = finalOrdered.find((rank) =>
+        String(rank?.id || '').trim() === FIXED_AUTO_RANK_KEY
+    );
+    const matchingAutoRank = autoRankNameKey
+        ? finalOrdered.find((rank) => String(rank?.name || '').trim().normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase() === autoRankNameKey)
+        : null;
+    const progressionRank = autoDisplayRank
+        ? {
+            ...(fixedAutoRank || matchingAutoRank || {}),
             ...autoDisplayRank,
+            id: FIXED_AUTO_RANK_KEY,
             name: autoRankName,
             color: autoRankNameKey === 'membro inicial' ? '#8B5CF6' : autoDisplayRank.color,
             description: autoDisplayRank.description
                 || (autoRankNameKey === 'membro inicial' ? 'Bem-vindo à Guild Holiday' : ''),
             rankGroup: 'progression',
             isFixed: true
-        });
-    }
+        }
+        : fixedAutoRank || matchingAutoRank;
 
-    return finalOrdered;
+    if (!progressionRank) return finalOrdered;
+
+    const remainingRanks = finalOrdered.filter((rank) => {
+        const rankId = String(rank?.id || '').trim();
+        const rankNameKey = String(rank?.name || '').trim().normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+        return rankId !== FIXED_AUTO_RANK_KEY
+            && (!autoRankNameKey || rankNameKey !== autoRankNameKey);
+    });
+    return [...remainingRanks, progressionRank];
 }
 
 async function getAnimatedProfilePermissions(userId) {
@@ -972,6 +993,157 @@ function dbRun(sql, params = []) {
             else resolve(this);
         });
     });
+}
+
+let downloadUploadQuotaQueue = Promise.resolve();
+
+async function withDownloadUploadQuotaLock(operation) {
+    const previous = downloadUploadQuotaQueue;
+    let release;
+    downloadUploadQuotaQueue = new Promise((resolve) => {
+        release = resolve;
+    });
+    await previous;
+    try {
+        return await operation();
+    } finally {
+        release();
+    }
+}
+
+function getR2UploadIdFromUrl(rawUrl) {
+    try {
+        const pathname = new URL(String(rawUrl || '')).pathname;
+        const match = pathname.match(/\/api\/downloads\/file\/([0-9a-f-]{36})$/i);
+        const uploadId = String(match?.[1] || '').trim();
+        return isValidDownloadUploadId(uploadId) ? uploadId : '';
+    } catch {
+        return '';
+    }
+}
+
+function getDownloadLinkAt(download, linkIndex) {
+    let links = [];
+    if (typeof download?.links_json === 'string' && download.links_json.trim()) {
+        try {
+            const parsed = JSON.parse(download.links_json);
+            if (Array.isArray(parsed)) links = parsed;
+        } catch {
+            throw new Error('A postagem contém uma lista de links inválida.');
+        }
+    }
+
+    const normalized = links
+        .map((item) => typeof item === 'string'
+            ? item.trim()
+            : String(item?.url || item?.link || '').trim())
+        .filter(Boolean);
+    if (normalized.length === 0 && typeof download?.link === 'string' && download.link.trim()) {
+        normalized.push(download.link.trim());
+    }
+    return normalized[linkIndex] || '';
+}
+
+function getR2UploadIdsFromLinks(links) {
+    const values = Array.isArray(links) ? links : [];
+    return [...new Set(values
+        .map((link) => getR2UploadIdFromUrl(link?.url || link?.link || link))
+        .filter(Boolean))];
+}
+
+function getR2UploadIdsFromDownload(download) {
+    const links = [];
+    if (download?.links_json) {
+        try {
+            const parsed = JSON.parse(download.links_json);
+            if (Array.isArray(parsed)) links.push(...parsed);
+        } catch {
+            console.error('[R2] Não foi possível interpretar links_json ao limpar arquivos.');
+        }
+    }
+    if (download?.link) links.push(download.link);
+    return getR2UploadIdsFromLinks(links);
+}
+
+async function findDownloadReferencingR2Upload(uploadId, excludedDownloadId = null) {
+    const urlPattern = `%/api/downloads/file/${uploadId}%`;
+    const exclusionSql = excludedDownloadId === null ? '' : 'AND id != ?';
+    const params = excludedDownloadId === null
+        ? [urlPattern, urlPattern]
+        : [urlPattern, urlPattern, excludedDownloadId];
+    return dbGet(
+        `SELECT id FROM downloads
+         WHERE (link LIKE ? OR links_json LIKE ?) ${exclusionSql}
+         LIMIT 1`,
+        params
+    );
+}
+
+async function attachR2UploadsToDownload(userId, downloadId, uploadIds) {
+    for (const uploadId of uploadIds) {
+        try {
+            await dbRun(
+                `UPDATE download_upload_reservations
+                 SET status = 'attached', downloadId = ?, expiresAt = NULL
+                 WHERE uploadId = ? AND userId = ? AND status IN ('uploaded', 'attached')`,
+                [downloadId, uploadId, userId]
+            );
+        } catch (error) {
+            console.error(`[R2] Não foi possível associar o arquivo ${uploadId} à postagem ${downloadId}:`, error);
+        }
+    }
+}
+
+async function deleteR2UploadsIfUnreferenced(uploadIds, excludedDownloadId = null) {
+    for (const uploadId of uploadIds) {
+        try {
+            const reference = await findDownloadReferencingR2Upload(uploadId, excludedDownloadId);
+            if (reference) continue;
+
+            await deleteDownloadObject(uploadId);
+            await dbRun(
+                `DELETE FROM download_upload_reservations WHERE uploadId = ?`,
+                [uploadId]
+            );
+        } catch (error) {
+            console.error(`[R2] Não foi possível limpar o arquivo ${uploadId}:`, error);
+        }
+    }
+}
+
+async function cleanupExpiredR2Uploads() {
+    const expiredUploads = await dbAll(
+        `SELECT uploadId, downloadId
+         FROM download_upload_reservations
+         WHERE status IN ('pending', 'uploaded')
+           AND expiresAt IS NOT NULL
+           AND expiresAt <= ?`,
+        [Date.now()]
+    );
+
+    for (const upload of expiredUploads) {
+        const uploadId = String(upload.uploadId || '');
+        try {
+            const reference = await findDownloadReferencingR2Upload(uploadId);
+            if (reference) {
+                await dbRun(
+                    `UPDATE download_upload_reservations
+                     SET status = 'attached', downloadId = ?, expiresAt = NULL
+                     WHERE uploadId = ?`,
+                    [reference.id, uploadId]
+                );
+                continue;
+            }
+
+            await deleteDownloadObject(uploadId);
+            await dbRun(
+                `DELETE FROM download_upload_reservations WHERE uploadId = ?`,
+                [uploadId]
+            );
+        } catch (error) {
+            console.error(`[R2] Não foi possível limpar upload expirado ${uploadId}:`, error);
+        }
+    }
 }
 
 async function getUserNotificationSettings(userId) {
@@ -1252,8 +1424,493 @@ router.get('/can-post', protect, async (req, res) => {
     }
 });
 
-// POST - Upload de arquivo para download
-router.post('/upload-file', protect, downloadFileUpload.single('file'), async (req, res) => {
+function getDownloadUploadPermissionMessage(req) {
+    const emailVerified = Number(req.user?.emailVerified) === 1;
+    return emailVerified
+        ? 'Você não tem permissão para postar downloads. Peça permissão ao administrador.'
+        : 'Confirme seu e-mail antes de postar downloads.';
+}
+
+async function getDownloadUploadSettingEnabled() {
+    const row = await dbGet(
+        `SELECT settingValue FROM site_settings WHERE settingKey = 'download_uploads_enabled' LIMIT 1`
+    );
+    return String(row?.settingValue || '0') === '1';
+}
+
+// POST - Solicitar uma autorização temporária para enviar o arquivo diretamente ao R2
+router.post('/upload-ticket', protect, downloadUploadRateLimiter, async (req, res) => {
+    let uploadId = '';
+    try {
+        let metadata;
+        try {
+            metadata = getDownloadUploadMetadata({
+                filename: req.body?.filename,
+                contentType: req.body?.contentType,
+                size: req.body?.size
+            });
+        } catch (error) {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+
+        const canPost = await Download.hasPostPermission(req.user.id);
+        if (!canPost) {
+            return res.status(403).json({
+                success: false,
+                message: getDownloadUploadPermissionMessage(req)
+            });
+        }
+        const canUpload = await getDownloadUploadSettingEnabled();
+        if (!canUpload) {
+            return res.status(403).json({
+                success: false,
+                message: 'Essa opção está indisponivel no momento'
+            });
+        }
+
+        uploadId = createDownloadUploadId();
+        const objectKey = createDownloadObjectKey(uploadId);
+        const expiresAt = Date.now() + DOWNLOAD_UPLOAD_RESERVATION_TTL_MS;
+
+        const hasStorageCapacity = await withDownloadUploadQuotaLock(async () => {
+            const now = Date.now();
+            await cleanupExpiredR2Uploads();
+            const reservations = await dbAll(
+                `SELECT objectKey, expectedSize
+                 FROM download_upload_reservations
+                 WHERE status = 'pending' AND expiresAt > ?`,
+                [now]
+            );
+            const reservationByKey = new Map(
+                reservations.map((reservation) => [
+                    String(reservation.objectKey),
+                    Number(reservation.expectedSize) || 0
+                ])
+            );
+            const storedObjects = await listStoredDownloadObjects();
+            const storedBytes = storedObjects.reduce((total, object) => (
+                total + (reservationByKey.has(object.key) ? 0 : object.size)
+            ), 0);
+            const reservedBytes = Array.from(reservationByKey.values())
+                .reduce((total, size) => total + size, 0);
+
+            if (storedBytes + reservedBytes + metadata.size > DOWNLOAD_STORAGE_CAP_BYTES) {
+                return false;
+            }
+
+            await dbRun(
+                `INSERT INTO download_upload_reservations
+                     (uploadId, userId, objectKey, originalName, contentType, expectedSize, status, expiresAt)
+                     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+                [
+                    uploadId,
+                    req.user.id,
+                    objectKey,
+                    metadata.originalName,
+                    metadata.contentType,
+                    metadata.size,
+                    expiresAt
+                ]
+            );
+            return true;
+        });
+
+        if (!hasStorageCapacity) {
+            return res.status(503).json({
+                success: false,
+                code: 'DOWNLOAD_STORAGE_LIMIT_REACHED',
+                message: 'Essa opção no momento não está disponível, tente mais tarde!'
+            });
+        }
+
+        const uploadUrl = await createPresignedDownloadUpload({
+            uploadId,
+            contentType: metadata.contentType,
+            size: metadata.size
+        });
+        res.status(201).json({
+            success: true,
+            upload: {
+                uploadId,
+                uploadUrl,
+                headers: { 'Content-Type': metadata.contentType },
+                originalName: metadata.originalName,
+                size: metadata.size,
+                format: metadata.format
+            }
+        });
+    } catch (error) {
+        if (uploadId) {
+            try {
+                await dbRun(
+                    `DELETE FROM download_upload_reservations WHERE uploadId = ? AND userId = ?`,
+                    [uploadId, req.user.id]
+                );
+            } catch (reservationError) {
+                console.error('[R2] Erro ao liberar reserva de upload:', reservationError);
+            }
+        }
+        console.error('[R2] Erro ao preparar upload de download:', error);
+        res.status(503).json({
+            success: false,
+            message: 'O armazenamento de arquivos está temporariamente indisponível. Tente novamente mais tarde.'
+        });
+    }
+});
+
+// POST - Confirmar que o arquivo autorizado foi enviado e registrar seu link estável
+router.post('/upload-complete', protect, downloadUploadRateLimiter, async (req, res) => {
+    const uploadId = String(req.body?.uploadId || '').trim();
+    if (!isValidDownloadUploadId(uploadId)) {
+        return res.status(400).json({ success: false, message: 'Identificador de upload inválido.' });
+    }
+
+    try {
+        const reservation = await dbGet(
+            `SELECT uploadId, objectKey, originalName, contentType, expectedSize, status, expiresAt
+             FROM download_upload_reservations
+             WHERE uploadId = ? AND userId = ?`,
+            [uploadId, req.user.id]
+        );
+        if (!reservation) {
+            return res.status(410).json({
+                success: false,
+                message: 'A autorização do upload expirou. Escolha o arquivo novamente.'
+            });
+        }
+        const canUpload = await getDownloadUploadSettingEnabled();
+        if (!canUpload) {
+            await deleteDownloadObject(uploadId);
+            await dbRun(
+                `DELETE FROM download_upload_reservations WHERE uploadId = ? AND userId = ?`,
+                [uploadId, req.user.id]
+            );
+            return res.status(403).json({
+                success: false,
+                message: 'Essa opção está indisponivel no momento'
+            });
+        }
+        if (reservation.status !== 'attached' && Number(reservation.expiresAt) <= Date.now()) {
+            await cleanupExpiredR2Uploads();
+            return res.status(410).json({
+                success: false,
+                message: 'A autorização do upload expirou. Escolha o arquivo novamente.'
+            });
+        }
+
+        let storedObject;
+        try {
+            storedObject = await inspectDownloadObject(uploadId);
+        } catch (error) {
+            if (error?.$metadata?.httpStatusCode === 404 || error?.name === 'NotFound') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'O arquivo ainda não chegou ao armazenamento. Tente enviá-lo novamente.'
+                });
+            }
+            throw error;
+        }
+
+        if (Number(storedObject.ContentLength) !== Number(reservation.expectedSize)) {
+            if (reservation.status !== 'attached') {
+                await deleteDownloadObject(uploadId);
+                await dbRun(
+                    `DELETE FROM download_upload_reservations
+                     WHERE uploadId = ? AND userId = ?`,
+                    [uploadId, req.user.id]
+                );
+            }
+            return res.status(400).json({
+                success: false,
+                message: 'O tamanho enviado não corresponde ao arquivo selecionado.'
+            });
+        }
+
+        if (reservation.status === 'pending') {
+            await dbRun(
+                `UPDATE download_upload_reservations
+                 SET status = 'uploaded', expiresAt = ?
+                 WHERE uploadId = ? AND userId = ? AND status = 'pending'`,
+                [Date.now() + 24 * 60 * 60 * 1000, uploadId, req.user.id]
+            );
+        }
+
+        const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+        const origin = `${protocol}://${req.get('host')}`;
+        const downloadUrl = new URL(
+            `${req.baseUrl}/file/${encodeURIComponent(uploadId)}?name=${encodeURIComponent(reservation.originalName)}`,
+            origin
+        ).toString();
+        const extension = path.extname(reservation.originalName).toLowerCase();
+
+        res.status(201).json({
+            success: true,
+            file: {
+                url: downloadUrl,
+                uploadId,
+                originalName: reservation.originalName,
+                mime: reservation.contentType,
+                size: Number(storedObject.ContentLength),
+                format: DOWNLOAD_UPLOAD_EXTENSION_FORMAT_MAP[extension] || 'outro'
+            }
+        });
+    } catch (error) {
+        console.error('[R2] Erro ao confirmar upload de download:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Não foi possível confirmar o arquivo enviado. Tente novamente mais tarde.'
+        });
+    }
+});
+
+// DELETE - Remover upload finalizado que não foi vinculado a uma postagem
+router.delete('/upload/:uploadId', protect, async (req, res) => {
+    const uploadId = String(req.params.uploadId || '').trim();
+    if (!isValidDownloadUploadId(uploadId)) {
+        return res.status(400).json({ success: false, message: 'Identificador de upload inválido.' });
+    }
+
+    try {
+        const reservation = await dbGet(
+            `SELECT status FROM download_upload_reservations
+             WHERE uploadId = ? AND userId = ?`,
+            [uploadId, req.user.id]
+        );
+        if (!reservation) {
+            const reference = await findDownloadReferencingR2Upload(uploadId);
+            return res.json({ success: true, attached: Boolean(reference) });
+        }
+
+        const reference = await findDownloadReferencingR2Upload(uploadId);
+        if (reservation.status === 'attached' || reference) {
+            if (reference) {
+                await dbRun(
+                    `UPDATE download_upload_reservations
+                     SET status = 'attached', downloadId = ?, expiresAt = NULL
+                     WHERE uploadId = ? AND userId = ?`,
+                    [reference.id, uploadId, req.user.id]
+                );
+            }
+            return res.json({ success: true, attached: true });
+        }
+
+        await deleteDownloadObject(uploadId);
+        await dbRun(
+            `DELETE FROM download_upload_reservations WHERE uploadId = ? AND userId = ?`,
+            [uploadId, req.user.id]
+        );
+        return res.json({ success: true, attached: false });
+    } catch (error) {
+        console.error('[R2] Erro ao cancelar upload de download:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Não foi possível remover o arquivo enviado.'
+        });
+    }
+});
+
+router.post('/virus-scan-file', downloadFileVirusScanRateLimiter, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.body?.consent !== true) {
+        return res.status(400).json({
+            success: false,
+            message: 'Confirme que deseja enviar o arquivo ao VirusTotal.'
+        });
+    }
+
+    const apiKey = String(process.env.VIRUSTOTAL_API_KEY || '').trim();
+    if (!apiKey) {
+        return res.status(503).json({
+            success: false,
+            message: 'A verificação de arquivos ainda não foi configurada.'
+        });
+    }
+
+    const downloadId = Number(req.body?.downloadId);
+    const linkIndex = Number(req.body?.linkIndex);
+    if (!Number.isSafeInteger(downloadId) || downloadId < 1
+        || !Number.isInteger(linkIndex) || linkIndex < 0 || linkIndex > 2) {
+        return res.status(400).json({
+            success: false,
+            message: 'Postagem ou arquivo inválido.'
+        });
+    }
+
+    try {
+        const download = await Download.getDownloadById(downloadId);
+        if (!download) {
+            return res.status(404).json({ success: false, message: 'Postagem não encontrada.' });
+        }
+
+        const viewer = await getViewerAdultContext(req);
+        const visibleDownload = applyAdultVisibilityForViewer([download], viewer)[0];
+        if (!visibleDownload || visibleDownload.isAdultLocked || visibleDownload.membersOnlyLocked) {
+            return res.status(404).json({ success: false, message: 'Postagem não encontrada ou sem acesso.' });
+        }
+        if (['suspended', 'under_review'].includes(String(download.suspensionStatus || '').toLowerCase())) {
+            return res.status(403).json({
+                success: false,
+                message: 'Esta postagem não está disponível para verificação.'
+            });
+        }
+
+        const selectedLink = getDownloadLinkAt(download, linkIndex);
+        let selectedUrl;
+        try {
+            selectedUrl = new URL(selectedLink);
+        } catch {
+            return res.status(400).json({
+                success: false,
+                message: 'O link do arquivo nesta postagem é inválido.'
+            });
+        }
+        const apiProtocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+        const expectedOrigin = `${apiProtocol}://${String(req.get('host') || '').toLowerCase()}`;
+        if (selectedUrl.origin !== expectedOrigin) {
+            return res.status(400).json({
+                success: false,
+                message: 'A análise está disponível apenas para arquivos enviados diretamente ao site.'
+            });
+        }
+        const uploadId = getR2UploadIdFromUrl(selectedLink);
+        if (!uploadId) {
+            return res.status(400).json({
+                success: false,
+                message: 'A verificação de arquivo está disponível apenas para arquivos enviados ao site.'
+            });
+        }
+
+        const reservation = await dbGet(
+            `SELECT originalName, expectedSize, status, downloadId
+             FROM download_upload_reservations
+             WHERE uploadId = ?`,
+            [uploadId]
+        );
+        if (!reservation || reservation.status !== 'attached'
+            || Number(reservation.downloadId) !== downloadId) {
+            return res.status(404).json({
+                success: false,
+                message: 'Arquivo não encontrado nesta postagem.'
+            });
+        }
+
+        let storedObject;
+        try {
+            storedObject = await inspectDownloadObject(uploadId);
+        } catch (error) {
+            if (error?.$metadata?.httpStatusCode === 404 || error?.name === 'NotFound') {
+                return res.status(404).json({
+                    success: false,
+                    message: 'O arquivo não está disponível no armazenamento.'
+                });
+            }
+            throw error;
+        }
+        if (Number(storedObject.ContentLength) !== Number(reservation.expectedSize)) {
+            return res.status(409).json({
+                success: false,
+                message: 'O tamanho do arquivo armazenado não corresponde ao registro.'
+            });
+        }
+
+        const scan = virusTotalFileScanner.startScan({
+            uploadId,
+            filename: reservation.originalName,
+            size: Number(storedObject.ContentLength),
+            apiKey
+        });
+        return res.status(202).json({ success: true, scan });
+    } catch (error) {
+        if (error instanceof VirusTotalFileScanError) {
+            return res.status(error.httpStatus).json({
+                success: false,
+                code: error.code,
+                message: error.message
+            });
+        }
+        console.error('[VirusTotal] Erro ao iniciar análise do arquivo:', error?.message || 'erro desconhecido');
+        return res.status(503).json({
+            success: false,
+            message: 'Não foi possível iniciar a análise do arquivo.'
+        });
+    }
+});
+
+router.get(
+    '/virus-scan-file/:scanId',
+    downloadFileVirusScanStatusRateLimiter,
+    async (req, res) => {
+        res.setHeader('Cache-Control', 'no-store');
+        const scanId = String(req.params.scanId || '').trim();
+        if (!scanId || scanId.length > 64) {
+            return res.status(400).json({ success: false, message: 'Identificador de análise inválido.' });
+        }
+
+        const apiKey = String(process.env.VIRUSTOTAL_API_KEY || '').trim();
+        if (!apiKey) {
+            return res.status(503).json({
+                success: false,
+                message: 'A verificação de arquivos ainda não foi configurada.'
+            });
+        }
+
+        try {
+            const scan = await virusTotalFileScanner.getScan(scanId, apiKey);
+            return res.json({ success: true, scan });
+        } catch (error) {
+            if (error instanceof VirusTotalFileScanError) {
+                return res.status(error.httpStatus).json({
+                    success: false,
+                    code: error.code,
+                    message: error.message
+                });
+            }
+            console.error('[VirusTotal] Erro ao consultar análise do arquivo:', error?.message || 'erro desconhecido');
+            return res.status(503).json({
+                success: false,
+                message: 'Não foi possível consultar o resultado da análise.'
+            });
+        }
+    }
+);
+
+// GET - Redirecionar para uma URL temporária de download do objeto privado no R2
+router.get('/file/:uploadId', async (req, res) => {
+    const uploadId = String(req.params.uploadId || '').trim();
+    if (!isValidDownloadUploadId(uploadId)) {
+        return res.status(404).json({ success: false, message: 'Arquivo não encontrado.' });
+    }
+
+    try {
+        const signedUrl = await createPresignedDownloadRead(
+            uploadId,
+            sanitizeDownloadFilename(req.query?.name)
+        );
+        res.setHeader('Cache-Control', 'private, no-store');
+        return res.redirect(302, signedUrl);
+    } catch (error) {
+        console.error('[R2] Erro ao preparar download de arquivo:', error);
+        return res.status(503).json({
+            success: false,
+            message: 'O arquivo está temporariamente indisponível.'
+        });
+    }
+});
+
+function localDownloadUploadOnly(req, res, next) {
+    const hostname = String(req.hostname || '').toLowerCase();
+    const isLocalRequest = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (process.env.NODE_ENV === 'production' && !isLocalRequest) {
+        return res.status(410).json({
+            success: false,
+            message: 'Use o envio de arquivo atualizado pelo site.'
+        });
+    }
+    return downloadFileUpload.single('file')(req, res, next);
+}
+
+// POST - Upload local para desenvolvimento; produção envia direto ao R2
+router.post('/upload-file', protect, localDownloadUploadOnly, async (req, res) => {
     const payload = buildDownloadFilePayload(req.file, req);
     try {
         if (!payload) {
@@ -1263,23 +1920,24 @@ router.post('/upload-file', protect, downloadFileUpload.single('file'), async (r
         const canPost = await Download.hasPostPermission(req.user.id);
         if (!canPost) {
             await removeDownloadFileByPath(payload.path);
-
-            const emailVerified = Number(req.user?.emailVerified) === 1;
             return res.status(403).json({
                 success: false,
-                message: emailVerified
-                    ? 'Você não tem permissão para postar downloads. Peça permissão ao administrador.'
-                    : 'Confirme seu e-mail antes de postar downloads.'
+                message: getDownloadUploadPermissionMessage(req)
+            });
+        }
+        const canUpload = await getDownloadUploadSettingEnabled();
+        if (!canUpload) {
+            await removeDownloadFileByPath(payload.path);
+            return res.status(403).json({
+                success: false,
+                message: 'Essa opção está indisponivel no momento'
             });
         }
 
-        res.status(201).json({
-            success: true,
-            file: payload
-        });
+        res.status(201).json({ success: true, file: payload });
     } catch (error) {
         await removeDownloadFileByPath(payload?.path);
-        console.error('Erro ao enviar arquivo de download:', error);
+        console.error('Erro ao enviar arquivo de download local:', error);
         res.status(500).json({ success: false, message: 'Erro ao enviar arquivo' });
     }
 });
@@ -1662,6 +2320,11 @@ router.post('/', protect, postRateLimiter, async (req, res) => {
             isAdult: isAdultPost,
             membersOnly: isMembersOnlyPost
         });
+        await attachR2UploadsToDownload(
+            userId,
+            newDownload.id,
+            getR2UploadIdsFromLinks(normalizedLinks)
+        );
         const syncResult = await syncUserPostAchievementRanks(userId);
         
         // Obter informações completas do download
@@ -1975,6 +2638,7 @@ router.delete('/:downloadId', protect, async (req, res) => {
 
         // Deletar
         await Download.deleteDownload(downloadId);
+        await deleteR2UploadsIfUnreferenced(getR2UploadIdsFromDownload(download));
         for (const item of commentAttachments || []) {
             await removeCommentAttachmentFileByPath(item?.attachmentPath);
         }
@@ -2040,6 +2704,8 @@ router.put('/:downloadId', protect, async (req, res) => {
             }
         }
 
+        const previousR2UploadIds = getR2UploadIdsFromDownload(download);
+
         // Atualizar download
         const updatePayload = {
             name,
@@ -2055,6 +2721,13 @@ router.put('/:downloadId', protect, async (req, res) => {
 
         // Obter download atualizado
         const updatedDownload = await Download.getDownloadById(downloadId);
+        const updatedR2UploadIds = getR2UploadIdsFromDownload(updatedDownload);
+        await attachR2UploadsToDownload(userId, downloadId, updatedR2UploadIds);
+        const updatedR2UploadIdSet = new Set(updatedR2UploadIds);
+        await deleteR2UploadsIfUnreferenced(
+            previousR2UploadIds.filter((uploadId) => !updatedR2UploadIdSet.has(uploadId)),
+            downloadId
+        );
 
         res.json({
             success: true,
