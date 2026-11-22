@@ -2463,6 +2463,33 @@ class AuthAPI {
         }
     }
 
+    static async getProfileAnimationSettings() {
+        try {
+            const response = await fetch(`${API_URL}/users/profile-animation-settings`, {
+                method: 'GET',
+                headers: this.getHeaders(true)
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao obter preferência de animações do perfil:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
+    static async updateProfileAnimationSettings(profileAnimationMode) {
+        try {
+            const response = await fetch(`${API_URL}/users/profile-animation-settings`, {
+                method: 'PUT',
+                headers: this.getHeaders(true),
+                body: JSON.stringify({ profileAnimationMode })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao salvar preferência de animações do perfil:', error);
+            return { success: false, message: 'Erro de conexão' };
+        }
+    }
+
     static async getAdultPostSettings() {
         try {
             const response = await fetch(`${API_URL}/users/adult-post-settings`, {
