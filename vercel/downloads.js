@@ -2838,7 +2838,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
     document.querySelectorAll('.btn-virus-scan').forEach((button) => {
         button.addEventListener('click', async () => {
             const confirmed = await showConfirmModal(
-                'O VirusTotal verificará o link do download para ajudar a avaliar se ele é confiável. O link poderá ficar visível para outras pessoas; continue apenas se ele for público.',
+                'O VirusTotal verificará o link do download para ajudar a avaliar se ele é confiável. Uma ou poucas detecções podem ser falso positivo e não provam, por si só, que o arquivo seja malicioso. A análise do link avalia sua reputação e possíveis redirecionamentos, não necessariamente o conteúdo do arquivo. O link poderá ficar visível para outras pessoas; continue apenas se ele for público.',
                 {
                     title: 'Examinar link no VirusTotal?',
                     confirmText: 'Examinar vírus',
@@ -2896,7 +2896,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
                 const harmless = Number(stats.harmless) || 0;
                 if (malicious > 0) {
                     status.dataset.state = 'danger';
-                    status.textContent = `Alerta: ${malicious} mecanismo(s) marcaram o link como malicioso. Não baixe o arquivo.`;
+                    status.textContent = `Alerta: ${malicious} mecanismo(s) marcaram o link como malicioso. Baixe por sua conta e risco.`;
                 } else if (suspicious > 0) {
                     status.dataset.state = 'warning';
                     status.textContent = `Atenção: ${suspicious} mecanismo(s) marcaram o link como suspeito.`;
