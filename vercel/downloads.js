@@ -2566,7 +2566,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
         };
 
         if (rankComplete && !hasFinalDisplayRanks) {
-            const authorAutoRank = rankComplete.automaticCompleted || rankComplete.automatic || null;
+            const authorAutoRank = rankComplete.automatic || rankComplete.automaticCompleted || null;
             if (rankComplete.current && shouldIncludeRank(rankComplete.current)) {
                 sourceRanks.push(rankComplete.current);
             }
