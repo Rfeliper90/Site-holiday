@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles-premium.css?v=20260415-3">
     <link rel="stylesheet" href="profile.css?v=20261122-giphy-cover-1">
+    <link rel="stylesheet" href="profile-animation-preferences.css?v=20261122-account-motion-1">
 </head>
 <body>
     <div class="animated-background">
@@ -246,6 +247,21 @@
                         </label>
                         <div style="margin-top: 8px; color: rgba(255,255,255,0.65); font-size: 12px; line-height: 1.35;">
                             Ex.: no card que aparece em <strong>Downloads</strong> ao clicar no seu @.
+                        </div>
+                    </div>
+
+                    <div class="notif-settings-box" style="margin-top: 14px;">
+                        <h4 class="notif-settings-title">Animações do perfil e dos cards</h4>
+                        <label class="notif-setting-item">
+                            <input type="checkbox" id="pauseProfileAnimationsToggle">
+                            <span>Pausar animações CSS (GIFs e efeitos em canvas continuam)</span>
+                        </label>
+                        <label class="notif-setting-item">
+                            <input type="checkbox" id="disableProfileEffectsToggle">
+                            <span>Desativar todos os efeitos dos cards de perfil e downloads</span>
+                        </label>
+                        <div style="margin-top: 8px; color: rgba(255,255,255,0.65); font-size: 12px; line-height: 1.35;">
+                            Escolha uma opção. Para voltar ao normal, desmarque a opção ativa. A preferência fica salva na sua conta.
                         </div>
                     </div>
 
@@ -807,11 +823,12 @@
     </footer>
 
     <script src="site-config.js"></script>
-    <script src="auth-api.js?v=20261115-giphy-picker-1"></script>
+    <script src="auth-api.js?v=20261122-account-motion-1"></script>
     <script src="auth-manager.js"></script>
+    <script src="profile-animation-preferences.js?v=20261122-account-motion-1"></script>
     <script src="navigation.js?v=20261114-navbar-icons-1"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-    <script src="profile.js?v=20261122-progression-history-beta-4"></script>
+    <script src="profile.js?v=20261122-account-motion-1"></script>
 </body>
 </html>
 
