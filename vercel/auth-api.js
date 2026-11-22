@@ -2463,13 +2463,41 @@ class AuthAPI {
         }
     }
 
+    static async parseProfileAnimationSettingsResponse(response) {
+        let payload;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            console.error('Resposta inválida ao consultar preferência de animações:', {
+                status: response.status,
+                error
+            });
+            return {
+                success: false,
+                message: response.status === 404
+                    ? 'A rota não existe no backend publicado. Atualize o backend na Discloud.'
+                    : `Resposta inválida do servidor (HTTP ${response.status}).`
+            };
+        }
+
+        if (!response.ok) {
+            const message = response.status === 404
+                ? 'A rota não existe no backend publicado. Atualize o backend na Discloud.'
+                : payload?.message || `Erro HTTP ${response.status}`;
+            console.error('Erro HTTP ao consultar preferência de animações:', response.status, response.url);
+            return { success: false, message };
+        }
+
+        return payload;
+    }
+
     static async getProfileAnimationSettings() {
         try {
             const response = await fetch(`${API_URL}/users/profile-animation-settings`, {
                 method: 'GET',
                 headers: this.getHeaders(true)
             });
-            return await response.json();
+            return await this.parseProfileAnimationSettingsResponse(response);
         } catch (error) {
             console.error('Erro ao obter preferência de animações do perfil:', error);
             return { success: false, message: 'Erro de conexão' };
@@ -2483,7 +2511,7 @@ class AuthAPI {
                 headers: this.getHeaders(true),
                 body: JSON.stringify({ profileAnimationMode })
             });
-            return await response.json();
+            return await this.parseProfileAnimationSettingsResponse(response);
         } catch (error) {
             console.error('Erro ao salvar preferência de animações do perfil:', error);
             return { success: false, message: 'Erro de conexão' };
