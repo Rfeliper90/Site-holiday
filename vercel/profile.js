@@ -5120,7 +5120,7 @@ function renderRankHistory(history, rankProgress = {}) {
             }
             return Array.from(entriesByName.values()).sort((a, b) => {
                 const orderFor = (entry) => entry.isBetaSelection
-                    ? Number.MAX_SAFE_INTEGER
+                    ? -1
                     : progressionDisplayOrder.get(String(entry.rank?.name || '').trim().toLowerCase())
                         ?? Number.MAX_SAFE_INTEGER;
                 return orderFor(a) - orderFor(b);
