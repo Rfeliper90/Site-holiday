@@ -2497,7 +2497,7 @@ async function handleVirusTotalFileScan(button) {
 
     const confirmed = await showThemedConfirm({
         title: 'Enviar arquivo ao VirusTotal?',
-        message: 'Uma cópia do arquivo será enviada ao VirusTotal e incluída no conjunto de arquivos acessível à comunidade. Não envie arquivos privados, pessoais ou confidenciais.',
+        message: 'O VirusTotal analisará uma cópia do arquivo, mas o resultado é apenas um indicativo: detecções isoladas podem ser falso positivo. Se apenas a URL tiver sido analisada, isso avalia o endereço e seus redirecionamentos, não necessariamente o conteúdo do jogo. Confira o relatório antes de decidir. O arquivo enviado poderá ficar acessível a terceiros; prossiga apenas se ele for público e nunca envie arquivos privados, pessoais ou confidenciais.',
         confirmText: 'Enviar arquivo',
         cancelText: 'Cancelar'
     });
@@ -2547,7 +2547,7 @@ async function handleVirusTotalFileScan(button) {
                 const malicious = Number(stats.malicious) || 0;
                 const suspicious = Number(stats.suspicious) || 0;
                 const resultText = malicious || suspicious
-                    ? `Análise concluída: ${malicious} detecção(ões) maliciosa(s) e ${suspicious} suspeita(s).`
+                    ? `Alerta: ${malicious} mecanismo(s) marcaram o arquivo como malicioso e ${suspicious} como suspeito. Baixe por risco próprio.`
                     : 'Nenhuma detecção nesta análise; isso não garante que o arquivo seja seguro.';
                 setStatus(malicious || suspicious ? 'detected' : 'completed', resultText);
             } else {
