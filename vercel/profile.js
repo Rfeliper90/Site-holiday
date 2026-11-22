@@ -5080,6 +5080,20 @@ function renderRankHistory(history, rankProgress = {}) {
             ? membroInicialForDisplay || eloAtual
             : eloAtual)
             || ALL_RANKS.find(rank => String(rank.name).trim().toLowerCase() === 'membro inicial');
+    const completedProgressionEntries = progressionAchievementCards
+        .filter((entry) => {
+            if (!entry?.achieved || !entry.rank) return false;
+            return String(entry.rank.name || '').trim().toLowerCase() !== 'membro beta';
+        })
+        .map((entry) => ({ rank: entry.rank, achieved: true }));
+    (currentCustomRanksForRender || [])
+        .filter((rank) => {
+            const rankName = String(rank?.name || '').trim().toLowerCase();
+            return rankName !== 'membro beta'
+                && (String(rank?.rankGroup || '').trim().toLowerCase() === 'progression'
+                    || progressionDisplayOrder.has(rankName));
+        })
+        .forEach((rank) => completedProgressionEntries.push({ rank, achieved: true }));
 
     const conquistasSectionHTML = `
         <div style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(236, 72, 153, 0.35); background: rgba(236, 72, 153, 0.08); color: #F9A8D4; font-size: 12px; font-weight: 600; margin-bottom: 16px;">
@@ -5095,12 +5109,13 @@ function renderRankHistory(history, rankProgress = {}) {
                 entriesByName.set(rankNameKey, { rank, achieved: true, ...extra });
             };
 
-            if (membroBetaRankForDisplay && !membroBetaIsSelectedForDisplay) {
+            if (membroBetaRankForDisplay) {
                 addEntry(membroBetaRankForDisplay, { isBetaSelection: true });
             }
-            if (currentProgressionForDisplay) {
+            completedProgressionEntries.forEach(({ rank, ...entry }) => addEntry(rank, entry));
+            if (!membroBetaIsSelectedForDisplay && currentProgressionForDisplay) {
                 addEntry(currentProgressionForDisplay, {
-                    isBetaSelection: membroBetaIsSelectedForDisplay
+                    isBetaSelection: false
                 });
             }
             return Array.from(entriesByName.values()).sort((a, b) => {
