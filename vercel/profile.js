@@ -3648,7 +3648,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     const profileAnimationLoad = window.ProfileAnimationPreferences.load().catch((error) => {
         console.error('Erro ao carregar preferência de animações do perfil:', error);
-        showNotification('Não foi possível carregar a preferência de animações do perfil.', 'error');
+        showNotification(error?.message || 'Não foi possível carregar a preferência de animações do perfil.', 'error');
     });
 
     // ===== INICIALIZAR ELEMENTOS DO DOM =====
@@ -9919,17 +9919,27 @@ async function saveProfileAnimationSettings() {
     if (els.pause) els.pause.disabled = true;
     if (els.disable) els.disable.disabled = true;
 
+    let updateConfirmed = false;
     try {
         const result = await AuthAPI.updateProfileAnimationSettings(requestedMode);
         if (!result?.success) {
             throw new Error(result?.message || 'Não foi possível salvar a preferência de animações.');
         }
+        updateConfirmed = true;
 
-        applyProfileAnimationModeToUI(result.settings?.profileAnimationMode || requestedMode);
+        const savedSettings = await AuthAPI.getProfileAnimationSettings();
+        if (!savedSettings?.success || savedSettings.settings?.profileAnimationMode !== requestedMode) {
+            throw new Error(
+                savedSettings?.message ||
+                'O servidor não confirmou a preferência salva. Tente novamente.'
+            );
+        }
+
+        applyProfileAnimationModeToUI(savedSettings.settings.profileAnimationMode);
         showNotification('Preferência de animações salva', 'success');
     } catch (error) {
         console.error('Erro ao salvar preferência de animações do perfil:', error);
-        applyProfileAnimationModeToUI(previousMode);
+        applyProfileAnimationModeToUI(updateConfirmed ? requestedMode : previousMode);
         showNotification(error?.message || 'Erro ao salvar preferência de animações', 'error');
     } finally {
         isSavingProfileAnimationSettings = false;
