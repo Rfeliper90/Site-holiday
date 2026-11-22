@@ -2620,9 +2620,6 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
         };
 
         const FIXED_AUTO_RANK_KEY = 'fixed:auto';
-        const PROGRESSION_OVERRIDE_RANKS = new Set([
-            'membro beta', 'membro inicial', 'membro novato', 'membro ativo', 'membro iniciado'
-        ]);
         const BLOCKED_AUTO_PROGRESSION_RANKS = new Set([
             'membro novato', 'membro aprendiz', 'membro experiente', 'membro adepto',
             'membro especialista', 'membro mestre', 'grande mestre', 'membro lendário',
@@ -2706,42 +2703,6 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
             }
             pushUniqueRank(rank);
         });
-
-        const authorAutoRank = rankComplete?.automatic || rankComplete?.automaticCompleted || null;
-        const currentAutoRankName = String(authorAutoRank?.name || '').trim().toLowerCase();
-        const isAutomaticProgressionRank = (rank) => {
-            const nameLower = String(rank?.name || '').trim().toLowerCase();
-            return nameLower === 'membro inicial'
-                || PROGRESSION_OVERRIDE_RANKS.has(nameLower)
-                || BLOCKED_AUTO_PROGRESSION_RANKS.has(nameLower)
-                || String(rank?.id || '').trim().toLowerCase() === FIXED_AUTO_RANK_KEY;
-        };
-        let pinnedProgressionRank = hasBetaProgressionOverrideSelected
-            ? achievementRanks.find((rank) => String(rank?.name || '').trim().toLowerCase() === 'membro beta')
-            : achievementRanks.find((rank) => String(rank?.name || '').trim().toLowerCase() === currentAutoRankName)
-                || achievementRanks.find((rank) => String(rank?.id || '').trim().toLowerCase() === FIXED_AUTO_RANK_KEY);
-
-        if (!hasBetaProgressionOverrideSelected && !pinnedProgressionRank && authorAutoRank) {
-            pushUniqueRank({
-                ...authorAutoRank,
-                id: FIXED_AUTO_RANK_KEY,
-                rankGroup: 'progression',
-                isFixed: true
-            });
-            pinnedProgressionRank = achievementRanks.find((rank) =>
-                String(rank?.id || '').trim().toLowerCase() === FIXED_AUTO_RANK_KEY
-            );
-        }
-
-        const nonProgressionRanks = achievementRanks.filter((rank) =>
-            !isAutomaticProgressionRank(rank)
-        );
-        achievementRanks.splice(
-            0,
-            achievementRanks.length,
-            ...nonProgressionRanks,
-            ...(pinnedProgressionRank ? [pinnedProgressionRank] : [])
-        );
 
         const achievementsHTML = achievementRanks.length > 0
             ? achievementRanks.map(rank => {
@@ -5215,7 +5176,6 @@ async function showUserMiniProfile(userId) {
         }
         
         const miniRanks = [];
-        const FIXED_AUTO_RANK_KEY = 'fixed:auto';
         const addMiniRank = (rank) => {
             if (!rank || !rank.name) return;
             const key = String(rank.name).trim().toLowerCase();
@@ -5246,37 +5206,14 @@ async function showUserMiniProfile(userId) {
             }
         }
 
-        const MINI_AUTO_PROGRESSION_RANKS = new Set([
-            'membro inicial', 'membro novato', 'membro ativo', 'membro iniciado',
-            'membro aprendiz', 'membro experiente', 'membro adepto', 'membro especialista',
-            'membro mestre', 'grande mestre', 'membro lendário', 'membro mítico',
-            'membro transcendente', 'membro eterno', 'membro imortal'
-        ]);
-        const miniBetaRank = miniRanks.find((rank) =>
-            String(rank?.name || '').trim().toLowerCase() === 'membro beta'
-        );
-        const currentMiniProgressionRank = [profile.autoRank, profile.currentRank].find((rank) =>
-            MINI_AUTO_PROGRESSION_RANKS.has(String(rank?.name || '').trim().toLowerCase())
-        ) || miniRanks.find((rank) =>
-            String(rank?.id || '').trim().toLowerCase() === FIXED_AUTO_RANK_KEY
-        );
-
-        // REMOVER "Admin User", "Admin" e "Founder" da lista.
+        // Keep the rank order returned by the shared profile endpoint.
         const filteredMiniRanks = miniRanks.filter(rank => {
             if (isHiddenProfileRank(rank)) return false;
             const rankNameLower = String(rank.name || '').trim().toLowerCase();
             return rankNameLower !== 'admin user'
                 && rankNameLower !== 'admin'
-                && rankNameLower !== 'founder'
-                && rankNameLower !== 'membro beta'
-                && !MINI_AUTO_PROGRESSION_RANKS.has(rankNameLower)
-                && String(rank?.id || '').trim().toLowerCase() !== FIXED_AUTO_RANK_KEY;
+                && rankNameLower !== 'founder';
         });
-        if (miniBetaRank) {
-            filteredMiniRanks.push(miniBetaRank);
-        } else if (currentMiniProgressionRank) {
-            filteredMiniRanks.push(currentMiniProgressionRank);
-        }
 
         const rawShowFullName = profile.showFullNameInMiniProfile;
         const showFullNameInMiniProfile = rawShowFullName === undefined
