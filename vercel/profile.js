@@ -1,4 +1,4 @@
-﻿// Script para página de PROFILE
+// Script para página de PROFILE
 
 let currentUser = null;
 let currentRank = null;
@@ -8947,14 +8947,12 @@ function setAnimatedPreviewGiphy(gifIdValue) {
     card.querySelectorAll('.animated-profile-giphy-embed').forEach((embed) => embed.remove());
     const gifId = normalizeAnimatedProfileGiphyId(gifIdValue);
     if (!gifId) return;
-    const embed = document.createElement('iframe');
+    const embed = document.createElement('img');
     embed.className = 'animated-profile-giphy-embed';
-    embed.src = `https://giphy.com/embed/${encodeURIComponent(gifId)}`;
-    embed.title = 'GIF do GIPHY';
+    embed.src = `https://media.giphy.com/media/${encodeURIComponent(gifId)}/giphy.gif`;
+    embed.alt = '';
+    embed.setAttribute('aria-hidden', 'true');
     embed.loading = 'lazy';
-    embed.referrerPolicy = 'strict-origin-when-cross-origin';
-    embed.allow = 'autoplay; encrypted-media';
-    embed.allowFullscreen = true;
     card.prepend(embed);
 }
 
