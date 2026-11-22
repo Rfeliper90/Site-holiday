@@ -2169,6 +2169,71 @@ router.put('/notification-settings', protect, checkBanStatus, async (req, res) =
     }
 });
 
+// GET - Preferência de animações de perfil e cards para o usuário atual
+router.get('/profile-animation-settings', protect, checkBanStatus, async (req, res) => {
+    try {
+        const row = await new Promise((resolve, reject) => {
+            db.get(
+                'SELECT profileAnimationMode FROM users WHERE id = ?',
+                [req.user.id],
+                (err, data) => {
+                    if (err) reject(err);
+                    else resolve(data || null);
+                }
+            );
+        });
+
+        if (!row) {
+            return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
+        }
+
+        const allowedModes = ['normal', 'pause', 'off'];
+        const profileAnimationMode = allowedModes.includes(row.profileAnimationMode)
+            ? row.profileAnimationMode
+            : 'normal';
+
+        res.json({ success: true, settings: { profileAnimationMode } });
+    } catch (error) {
+        console.error('Erro ao buscar preferência de animações do perfil:', error);
+        res.status(500).json({ success: false, message: 'Erro no servidor' });
+    }
+});
+
+// PUT - Atualizar preferência de animações de perfil e cards do usuário atual
+router.put('/profile-animation-settings', protect, checkBanStatus, async (req, res) => {
+    try {
+        const profileAnimationMode = req.body?.profileAnimationMode;
+        const allowedModes = ['normal', 'pause', 'off'];
+
+        if (!allowedModes.includes(profileAnimationMode)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Modo de animação inválido'
+            });
+        }
+
+        await new Promise((resolve, reject) => {
+            db.run(
+                'UPDATE users SET profileAnimationMode = ? WHERE id = ?',
+                [profileAnimationMode, req.user.id],
+                (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                }
+            );
+        });
+
+        res.json({
+            success: true,
+            message: 'Preferência de animações salva',
+            settings: { profileAnimationMode }
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar preferência de animações do perfil:', error);
+        res.status(500).json({ success: false, message: 'Erro no servidor' });
+    }
+});
+
 // GET - Configuração de visibilidade de postagens +18
 router.get('/adult-post-settings', protect, checkBanStatus, async (req, res) => {
     try {
