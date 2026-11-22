@@ -772,7 +772,7 @@ async function buildFixedProfileRanks(userId, rankComplete, userHasBetaRank = fa
         ? {
             id: FIXED_AUTO_RANK_KEY,
             ...(rankComplete?.automatic || rankComplete?.automaticCompleted),
-            description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'Conquista automática atual',
+            description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'Conquista automática concluída',
             customText: '',
             backgroundImage: null,
             isVisible: 0,
@@ -2256,6 +2256,7 @@ router.get('/profile', protect, checkBanStatus, async (req, res) => {
                 emailVerified: user.emailVerified,
                 createdAt: user.createdAt,
                 manualRank: user.manualRank,
+                canUploadDownloads: Number(user.canUploadDownloads) === 1,
                 canOrderFixedRanks,
                 canChangeRankColor,
                 canUseAnimatedProfile,
