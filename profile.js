@@ -4162,7 +4162,7 @@ async function renderProfileData(result) {
             }
         }
 
-        // Usar a progressão automática atual; automaticCompleted representa o elo anterior.
+        // Usar o elo automático atual; a conquista concluída fica no histórico.
         if (result.rankComplete?.automatic?.name) {
             window.currentUserEloName = String(result.rankComplete.automatic.name || '').trim().toLowerCase();
         } else if (result.rankComplete?.automaticCompleted?.name) {
@@ -4670,7 +4670,7 @@ function renderRankHistory(history, rankProgress = {}) {
         'membro lendário', 'membro mítico', 'membro transcendente', 'membro eterno', 'membro imortal'
     ]);
 
-    // CONQUISTAS: usar o rank já resolvido pelo backend/loader como referência principal.
+    // CONQUISTAS: usar o elo automático atual, não o último elo concluído.
     const autoEloName = String(window.currentUserEloName || '').trim().toLowerCase();
     const preferredCurrentRank = currentRankComplete?.automatic
         || currentRankComplete?.automaticCompleted
@@ -4771,10 +4771,6 @@ function renderRankHistory(history, rankProgress = {}) {
     const membroBetaRankForDisplay = (currentCustomRanksForRender || []).find(rank => {
         return String(rank?.name || '').trim().toLowerCase() === 'membro beta';
     }) || null;
-    const membroBetaIsSelectedForDisplay = Boolean(
-        membroBetaRankForDisplay
-        && selectedProfileRankIdsSet.has(Number(membroBetaRankForDisplay.id))
-    );
     // Verificar se Membro Novato foi desbloqueado
     const membroNovatoUnlocked = conquistasPassadas.some(rank => 
         String(rank?.name || '').trim().toLowerCase() === 'membro novato'
@@ -5073,13 +5069,31 @@ function renderRankHistory(history, rankProgress = {}) {
         return 'Conquista especial';
     }
 
-    const currentProgressionName = String(eloAtual?.name || '').trim().toLowerCase();
-    const currentProgressionForDisplay = membroBetaIsSelectedForDisplay
-        ? membroBetaRankForDisplay
-        : (currentProgressionName === 'membro inicial'
-            ? membroInicialForDisplay || eloAtual
-            : eloAtual)
-            || ALL_RANKS.find(rank => String(rank.name).trim().toLowerCase() === 'membro inicial');
+    const currentProgressionForDisplay = eloAtual && String(eloAtual.name || '').trim().toLowerCase() !== 'membro inicial'
+        ? eloAtual
+        : ALL_RANKS.find(rank => String(rank.name).trim().toLowerCase() === 'membro inicial');
+    const currentProgressionOrder = progressionDisplayOrder.get(
+        String(currentProgressionForDisplay?.name || '').trim().toLowerCase()
+    );
+    const completedProgressionEntries = progressionAchievementCards
+        .filter((entry) => {
+            if (!entry?.achieved || !entry.rank) return false;
+            const rankName = String(entry.rank.name || '').trim().toLowerCase();
+            if (rankName === 'membro beta') return false;
+            const rankOrder = progressionDisplayOrder.get(rankName);
+            return currentProgressionOrder === undefined
+                || rankOrder === undefined
+                || rankOrder <= currentProgressionOrder;
+        })
+        .map((entry) => ({ rank: entry.rank, achieved: true }));
+    (currentCustomRanksForRender || [])
+        .filter((rank) => {
+            const rankName = String(rank?.name || '').trim().toLowerCase();
+            return rankName !== 'membro beta'
+                && (String(rank?.rankGroup || '').trim().toLowerCase() === 'progression'
+                    || progressionDisplayOrder.has(rankName));
+        })
+        .forEach((rank) => completedProgressionEntries.push({ rank, achieved: true }));
 
     const conquistasSectionHTML = `
         <div style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(236, 72, 153, 0.35); background: rgba(236, 72, 153, 0.08); color: #F9A8D4; font-size: 12px; font-weight: 600; margin-bottom: 16px;">
@@ -5095,14 +5109,14 @@ function renderRankHistory(history, rankProgress = {}) {
                 entriesByName.set(rankNameKey, { rank, achieved: true, ...extra });
             };
 
-            if (membroBetaRankForDisplay && !membroBetaIsSelectedForDisplay) {
+            if (membroBetaRankForDisplay) {
                 addEntry(membroBetaRankForDisplay, { isBetaSelection: true });
             }
-            if (currentProgressionForDisplay) {
-                addEntry(currentProgressionForDisplay, {
-                    isBetaSelection: membroBetaIsSelectedForDisplay
-                });
-            }
+
+            completedProgressionEntries.forEach(({ rank, ...entry }) => addEntry(rank, entry));
+            if (currentProgressionForDisplay) addEntry(currentProgressionForDisplay);
+
+            if (membroInicialForDisplay) addEntry(membroInicialForDisplay);
             return Array.from(entriesByName.values()).sort((a, b) => {
                 const orderFor = (entry) => entry.isBetaSelection
                     ? -1
@@ -5907,6 +5921,7 @@ function setupSelectedRanksDragAndDrop(display) {
 
     const canMoveBadge = (badge) => {
         if (!badge) return false;
+        if (badge.dataset.progressionPinned === '1') return false;
         const isFixed = badge.dataset.fixed === '1';
         return canOrderFixedRanks || !isFixed;
     };
@@ -6134,6 +6149,36 @@ async function loadSelectedRanksDisplay() {
             : null;
         const currentProgressionName = String(currentProgressionRank?.name || '').trim();
         const currentProgressionNameKey = normalizeAchievementNameKey(currentProgressionName);
+        const automaticProgressionBadgeNames = new Set([
+            'membro inicial', 'membro novato', 'membro iniciado', 'membro aprendiz',
+            'membro experiente', 'membro adepto', 'membro especialista', 'membro mestre',
+            'grande mestre', 'membro lendário', 'membro mítico', 'membro transcendente',
+            'membro eterno', 'membro imortal'
+        ].map(normalizeAchievementNameKey));
+        orderedSelectedRanks = orderedSelectedRanks.filter((rank) => {
+            const rankNameKey = normalizeAchievementNameKey(rank?.name || '');
+            const isAutomaticProgressionBadge = automaticProgressionBadgeNames.has(rankNameKey)
+                || String(rank?.id || '').trim() === FIXED_AUTO_RANK_KEY;
+            if (hasBetaProgressionOverrideSelected) {
+                return rankNameKey === normalizeAchievementNameKey('Membro Beta')
+                    || !isAutomaticProgressionBadge;
+            }
+            return !isAutomaticProgressionBadge || rankNameKey === currentProgressionNameKey;
+        });
+        const progressionNameToPin = hasBetaProgressionOverrideSelected
+            ? normalizeAchievementNameKey('Membro Beta')
+            : currentProgressionNameKey;
+        if (progressionNameToPin) {
+            const progressionIndex = orderedSelectedRanks.findIndex((rank) =>
+                normalizeAchievementNameKey(rank?.name || '') === progressionNameToPin
+                    || (!hasBetaProgressionOverrideSelected
+                        && String(rank?.id || '').trim() === FIXED_AUTO_RANK_KEY)
+            );
+            if (progressionIndex >= 0) {
+                const [progressionRank] = orderedSelectedRanks.splice(progressionIndex, 1);
+                orderedSelectedRanks.push(progressionRank);
+            }
+        }
         const progressionAlreadySelected = Boolean(currentProgressionNameKey)
             && orderedSelectedRanks.some((rank) =>
                 normalizeAchievementNameKey(rank?.name || '') === currentProgressionNameKey
@@ -6143,16 +6188,17 @@ async function loadSelectedRanksDisplay() {
             && !progressionAlreadySelected
             ? currentProgressionRank
             : null;
-        const progressionRankCanBeOrdered = Boolean(
-            canOrderFixedRanks
-            && progressionRankForStrip
-            && orderedSelectedRanks.length > 0
-        );
         const displayedRanksCount = orderedSelectedRanks.length + Number(Boolean(progressionRankForStrip));
-        const movableRanksCount = orderedSelectedRanks.filter((rank) => canOrderFixedRanks || !isFixedRankEntry(rank)).length;
+        const movableRanksCount = orderedSelectedRanks.filter((rank) => {
+            const rankNameKey = normalizeAchievementNameKey(rank?.name || '');
+            const isPinnedProgressionBadge = rankNameKey === normalizeAchievementNameKey('Membro Beta')
+                || rankNameKey === currentProgressionNameKey
+                || String(rank?.id || '').trim() === FIXED_AUTO_RANK_KEY;
+            return !isPinnedProgressionBadge && (canOrderFixedRanks || !isFixedRankEntry(rank));
+        }).length;
         // CORREÇÃO: Verificar permissão + ter pelo menos 2 conquistas
         const shouldShowOrderButton = canOrderFixedRanks
-            && movableRanksCount + Number(progressionRankCanBeOrdered) >= 2;
+            && movableRanksCount >= 2;
 
         if (!shouldShowOrderButton && isRankOrderMode) {
             isRankOrderMode = false;
@@ -6228,13 +6274,21 @@ async function loadSelectedRanksDisplay() {
                 if (!rankId || !rank?.name) return '';  // Evitar badges vazios
                 const rankName = String(rank.name || '').trim();
                 if (!rankName) return '';  // Evitar badge sem nome
-                const isFixed = fixedIds.has(rankKey);
-                const canMove = canOrderFixedRanks || !isFixed;
-                const showDragHandle = isRankOrderMode && shouldShowOrderButton && canMove;
-                const lockTitle = isRankOrderMode && !canMove ? 'Conquista fixa não pode ser movida' : '';
-                const tooltipText = lockTitle || resolveRankBadgeTooltip(rank);
+                const rankNameKey = normalizeAchievementNameKey(rankName);
                 const isCurrentProgressionBadge = currentProgressionNameKey
-                    && normalizeAchievementNameKey(rankName) === currentProgressionNameKey;
+                    && rankNameKey === currentProgressionNameKey;
+                const isPinnedProgressionBadge = isCurrentProgressionBadge
+                    || rankNameKey === normalizeAchievementNameKey('Membro Beta')
+                    || rankId.trim() === FIXED_AUTO_RANK_KEY;
+                const isFixed = fixedIds.has(rankKey) || isPinnedProgressionBadge;
+                const canMove = !isPinnedProgressionBadge && (canOrderFixedRanks || !isFixed);
+                const showDragHandle = isRankOrderMode && shouldShowOrderButton && canMove;
+                const lockTitle = isRankOrderMode && !canMove
+                    ? isPinnedProgressionBadge
+                        ? 'Conquista de progressão fica sempre por último'
+                        : 'Conquista fixa não pode ser movida'
+                    : '';
+                const tooltipText = lockTitle || resolveRankBadgeTooltip(rank);
                 const safeColor = String(
                     (isCurrentProgressionBadge
                         ? currentProgressionNameKey === normalizeAchievementNameKey('Membro Inicial')
@@ -6260,7 +6314,7 @@ async function loadSelectedRanksDisplay() {
                     : '';
 
                 return `
-                <div class="selected-conquista-badge${tooltipClass}" data-rank-id="${rankId}" data-fixed="${isFixed ? '1' : '0'}"${tooltipAttr} style="
+                <div class="selected-conquista-badge${tooltipClass}" data-rank-id="${rankId}" data-fixed="${isFixed ? '1' : '0'}" data-progression-pinned="${isPinnedProgressionBadge ? '1' : '0'}"${tooltipAttr} style="
                     border-color: ${safeColor};
                     color: ${safeColor};
                     background-color: ${safeColor}33;
@@ -6292,13 +6346,8 @@ async function loadSelectedRanksDisplay() {
                 const progressionTooltipAttr = progressionTooltip
                     ? ` data-tooltip="${escapeHtmlAttributeValue(progressionTooltip)}"`
                     : '';
-                const progressionRankId = progressionRankCanBeOrdered ? FIXED_AUTO_RANK_KEY : '';
-                const progressionIsFixed = progressionRankCanBeOrdered ? '1' : '0';
-                const progressionDragHandle = isRankOrderMode && shouldShowOrderButton && progressionRankCanBeOrdered
-                    ? '<span class="rank-drag-handle" aria-hidden="true">::</span>'
-                    : '';
                 progressionBadgeHtml = `
-                    <div class="selected-conquista-badge${progressionTooltip ? ' tooltip-theme' : ''}" data-profile-progression="${progressionRankCanBeOrdered ? 'orderable' : 'display-only'}" data-rank-id="${progressionRankId}" data-fixed="${progressionIsFixed}"${progressionTooltipAttr} style="
+                    <div class="selected-conquista-badge${progressionTooltip ? ' tooltip-theme' : ''}" data-profile-progression="display-only" data-rank-id="" data-fixed="1" data-progression-pinned="1"${progressionTooltipAttr} style="
                         border-color: ${progressionColor};
                         color: ${progressionColor};
                         background-color: ${progressionColor}33;
@@ -6307,12 +6356,11 @@ async function loadSelectedRanksDisplay() {
                         gap: 8px;
                     ">
                         <span>${escapeHtml(currentProgressionName)}</span>
-                        ${progressionDragHandle}
                     </div>
                 `;
             }
 
-            display.innerHTML = progressionBadgeHtml + html;
+            display.innerHTML = html + progressionBadgeHtml;
             if (!html.trim() && !progressionBadgeHtml.trim()) {
                 display.innerHTML = '';
                 section.style.display = 'none';
@@ -6339,7 +6387,7 @@ async function loadSelectedRanksDisplay() {
             }
 
             const hasFixedInUnifiedStrip = canOrderFixedRanks
-                && (orderedSelectedRanks.some((rank) => isFixedRankEntry(rank)) || progressionRankCanBeOrdered);
+                && (orderedSelectedRanks.some((rank) => isFixedRankEntry(rank)) || Boolean(progressionRankForStrip));
             syncUnifiedRankStripMode(Boolean(hasFixedInUnifiedStrip || progressionBadgeHtml || betaIsSelectedInStrip));
             setupSelectedRanksDragAndDrop(display);
             
@@ -8930,12 +8978,14 @@ function setAnimatedPreviewGiphy(gifIdValue) {
     card.querySelectorAll('.animated-profile-giphy-embed').forEach((embed) => embed.remove());
     const gifId = normalizeAnimatedProfileGiphyId(gifIdValue);
     if (!gifId) return;
-    const embed = document.createElement('img');
+    const embed = document.createElement('iframe');
     embed.className = 'animated-profile-giphy-embed';
-    embed.src = `https://media.giphy.com/media/${encodeURIComponent(gifId)}/giphy.gif`;
-    embed.alt = '';
-    embed.setAttribute('aria-hidden', 'true');
+    embed.src = `https://giphy.com/embed/${encodeURIComponent(gifId)}`;
+    embed.title = 'GIF do GIPHY';
     embed.loading = 'lazy';
+    embed.referrerPolicy = 'strict-origin-when-cross-origin';
+    embed.allow = 'autoplay; encrypted-media';
+    embed.allowFullscreen = true;
     card.prepend(embed);
 }
 
