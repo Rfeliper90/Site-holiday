@@ -1,5 +1,4 @@
 html[data-profile-animation-mode="pause"] :is(
-    .profile-content,
     .download-card,
     .mini-profile-card,
     .animated-profile-preview-card
@@ -11,13 +10,11 @@ html[data-profile-animation-mode="pause"] :is(
     .animated-profile-preview-card
 ) *,
 html[data-profile-animation-mode="pause"] :is(
-    .profile-content,
     .download-card,
     .mini-profile-card,
     .animated-profile-preview-card
 )::before,
 html[data-profile-animation-mode="pause"] :is(
-    .profile-content,
     .download-card,
     .mini-profile-card,
     .animated-profile-preview-card
