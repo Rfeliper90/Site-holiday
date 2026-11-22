@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import User from '../models/User.js';
 import Rank from '../models/Rank.js';
 import Download from '../models/Download.js';
@@ -1838,11 +1838,11 @@ router.get('/selected-ranks', protect, checkBanStatus, async (req, res) => {
         const fixedRanks = [];
         if (explicitFixedKeys.size > 0) {
             const rankComplete = await Rank.getUserRankComplete(userId);
-            const autoDisplayRank = (rankComplete?.automaticCompleted || rankComplete?.automatic)
+            const autoDisplayRank = (rankComplete?.automatic || rankComplete?.automaticCompleted)
                 ? {
                     id: FIXED_AUTO_RANK_KEY,
-                    ...(rankComplete?.automaticCompleted || rankComplete?.automatic),
-                    description: (rankComplete?.automaticCompleted || rankComplete?.automatic)?.description || 'conquista automática concluída',
+                    ...(rankComplete?.automatic || rankComplete?.automaticCompleted),
+                    description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'conquista automática atual',
                     customText: '',
                     backgroundImage: null,
                     isVisible: 0,
