@@ -4769,9 +4769,12 @@ function renderRankHistory(history, rankProgress = {}) {
     
     // Só permitir que Membro Beta substitua a progressão
     const membroBetaRankForDisplay = (currentCustomRanksForRender || []).find(rank => {
-        return String(rank?.name || '').trim().toLowerCase() === 'membro beta'
-            && selectedProfileRankIdsSet.has(Number(rank?.id));
+        return String(rank?.name || '').trim().toLowerCase() === 'membro beta';
     }) || null;
+    const membroBetaIsSelectedForDisplay = Boolean(
+        membroBetaRankForDisplay
+        && selectedProfileRankIdsSet.has(Number(membroBetaRankForDisplay.id))
+    );
     // Verificar se Membro Novato foi desbloqueado
     const membroNovatoUnlocked = conquistasPassadas.some(rank => 
         String(rank?.name || '').trim().toLowerCase() === 'membro novato'
@@ -5071,11 +5074,12 @@ function renderRankHistory(history, rankProgress = {}) {
     }
 
     const currentProgressionName = String(eloAtual?.name || '').trim().toLowerCase();
-    const currentProgressionForDisplay = membroBetaRankForDisplay
-        || (currentProgressionName === 'membro inicial'
+    const currentProgressionForDisplay = membroBetaIsSelectedForDisplay
+        ? membroBetaRankForDisplay
+        : (currentProgressionName === 'membro inicial'
             ? membroInicialForDisplay || eloAtual
             : eloAtual)
-        || ALL_RANKS.find(rank => String(rank.name).trim().toLowerCase() === 'membro inicial');
+            || ALL_RANKS.find(rank => String(rank.name).trim().toLowerCase() === 'membro inicial');
 
     const conquistasSectionHTML = `
         <div style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(236, 72, 153, 0.35); background: rgba(236, 72, 153, 0.08); color: #F9A8D4; font-size: 12px; font-weight: 600; margin-bottom: 16px;">
@@ -5091,9 +5095,12 @@ function renderRankHistory(history, rankProgress = {}) {
                 entriesByName.set(rankNameKey, { rank, achieved: true, ...extra });
             };
 
+            if (membroBetaRankForDisplay && !membroBetaIsSelectedForDisplay) {
+                addEntry(membroBetaRankForDisplay, { isBetaSelection: true });
+            }
             if (currentProgressionForDisplay) {
                 addEntry(currentProgressionForDisplay, {
-                    isBetaSelection: currentProgressionForDisplay === membroBetaRankForDisplay
+                    isBetaSelection: membroBetaIsSelectedForDisplay
                 });
             }
             return Array.from(entriesByName.values()).sort((a, b) => {
