@@ -859,6 +859,8 @@ export async function getProfileDisplayRanks(userId, rankComplete) {
         return true;
     });
 
+    if (hasBetaOverrideSelected) return finalOrdered;
+
     const autoDisplayRank = rankComplete?.automatic
         || rankComplete?.automaticCompleted
         || (rankComplete?.current?.isCustom !== true ? rankComplete?.current : null)
@@ -867,28 +869,19 @@ export async function getProfileDisplayRanks(userId, rankComplete) {
     const autoRankNameKey = autoRankName.normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
-    const betaDisplayRank = finalOrdered.find((rank) =>
-        String(rank?.name || '').trim().toLowerCase() === 'membro beta'
-    );
-    if (hasBetaOverrideSelected && betaDisplayRank) {
-        const remainingRanks = finalOrdered.filter((rank) =>
-            String(rank?.name || '').trim().toLowerCase() !== 'membro beta'
-                && String(rank?.id || '').trim() !== FIXED_AUTO_RANK_KEY
-        );
-        return [...remainingRanks, betaDisplayRank];
-    }
-
-    const fixedAutoRank = finalOrdered.find((rank) =>
-        String(rank?.id || '').trim() === FIXED_AUTO_RANK_KEY
-    );
-    const matchingAutoRank = autoRankNameKey
-        ? finalOrdered.find((rank) => String(rank?.name || '').trim().normalize('NFD')
+    const hasOrderedAutoRank = finalOrdered.some((rank) => {
+        const rankNameKey = String(rank?.name || '').trim().normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase() === autoRankNameKey)
-        : null;
-    const progressionRank = autoDisplayRank
-        ? {
-            ...(fixedAutoRank || matchingAutoRank || {}),
+            .toLowerCase();
+        return String(rank?.id || '').trim() === FIXED_AUTO_RANK_KEY
+            || (autoRankNameKey && rankNameKey === autoRankNameKey);
+    });
+
+    if (hasOrderedAutoRank || !autoDisplayRank || !autoRankName) return finalOrdered;
+
+    return [
+        ...finalOrdered,
+        {
             ...autoDisplayRank,
             id: FIXED_AUTO_RANK_KEY,
             name: autoRankName,
@@ -898,19 +891,7 @@ export async function getProfileDisplayRanks(userId, rankComplete) {
             rankGroup: 'progression',
             isFixed: true
         }
-        : fixedAutoRank || matchingAutoRank;
-
-    if (!progressionRank) return finalOrdered;
-
-    const remainingRanks = finalOrdered.filter((rank) => {
-        const rankId = String(rank?.id || '').trim();
-        const rankNameKey = String(rank?.name || '').trim().normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase();
-        return rankId !== FIXED_AUTO_RANK_KEY
-            && (!autoRankNameKey || rankNameKey !== autoRankNameKey);
-    });
-    return [...remainingRanks, progressionRank];
+    ];
 }
 
 async function getAnimatedProfilePermissions(userId) {
