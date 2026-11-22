@@ -59,7 +59,15 @@
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    height: 470px;
+    min-height: 470px;
+}
+
+.download-card.virus-scan-flagged {
+    height: auto;
+}
+
+.download-card.virus-scan-flagged .download-content {
+    flex: 0 0 auto;
 }
 
 .animated-download-card {
