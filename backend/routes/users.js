@@ -1842,7 +1842,7 @@ router.get('/selected-ranks', protect, checkBanStatus, async (req, res) => {
                 ? {
                     id: FIXED_AUTO_RANK_KEY,
                     ...(rankComplete?.automatic || rankComplete?.automaticCompleted),
-                    description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'conquista automática atual',
+                    description: (rankComplete?.automatic || rankComplete?.automaticCompleted)?.description || 'conquista automática concluída',
                     customText: '',
                     backgroundImage: null,
                     isVisible: 0,
