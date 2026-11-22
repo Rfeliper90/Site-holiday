@@ -1060,6 +1060,7 @@ function supportsAdvancedCardFx() {
 }
 
 function bindCardFx(cardElement) {
+    if (window.ProfileAnimationPreferences?.getMode?.() === 'off') return;
     if (!cardElement || cardElement.dataset.fxBound === '1') return;
     if (!supportsAdvancedCardFx()) return;
 
@@ -2668,6 +2669,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
             : '';
         const links = isContentLocked ? [] : parseDownloadLinks(download);
         const canUseAnimatedProfile = ENABLE_ANIMATED_DOWNLOAD_CARDS
+            && window.ProfileAnimationPreferences?.getMode?.() !== 'off'
             && Boolean(download.authorCanUseAnimatedProfile)
             && Boolean(download.authorAnimatedDownloadCardEnabled ?? download.authorAnimatedProfileEnabled);
         const animatedCardConfig = canUseAnimatedProfile
@@ -4973,10 +4975,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     `;
     document.head.appendChild(styleSheet);
 
+    const profileAnimationLoad = window.ProfileAnimationPreferences.load().catch((error) => {
+        console.error('Erro ao carregar preferência de animações do perfil:', error);
+        return null;
+    });
     setupFormatHelpTooltip();
     setupPostAdvancedOptionsToggle();
     syncAdultPostOptionVisibility();
     await loadCurrentUser();
+    await profileAnimationLoad;
     await loadGlobalDownloadUploadsSetting();
     syncFavoritesToggleButton();
     syncPostButtonAvailability();
@@ -5149,7 +5156,9 @@ async function showUserMiniProfile(userId) {
         `;
         
         const content = document.createElement('div');
-        const canUseAnimatedProfile = Boolean(profile.canUseAnimatedProfile) && Boolean(profile.animatedMiniProfileEnabled ?? profile.animatedProfileEnabled);
+        const canUseAnimatedProfile = window.ProfileAnimationPreferences?.getMode?.() !== 'off'
+            && Boolean(profile.canUseAnimatedProfile)
+            && Boolean(profile.animatedMiniProfileEnabled ?? profile.animatedProfileEnabled);
         const miniCardConfig = canUseAnimatedProfile
             ? buildAnimatedCardConfig(
                 `mini-${userId || 0}`,
