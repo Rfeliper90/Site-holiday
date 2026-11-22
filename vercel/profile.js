@@ -4119,7 +4119,7 @@ async function renderProfileData(result) {
                 && selectedRankIds.has(normalizeRankOrderKey(betaRank.id));
             const currentRank = betaIsSelected
                 ? betaRank
-                : result.rankComplete.automaticCompleted || result.rankComplete.automatic;
+                : result.rankComplete.automatic || result.rankComplete.automaticCompleted;
             
             // Se houver um rank customizado com o mesmo nome, usar suas cores/metadata para o badge automático.
             const autoRankName = String(autoRank?.name || '').trim().toLowerCase();
@@ -4162,12 +4162,11 @@ async function renderProfileData(result) {
             }
         }
 
-        // Usar a última conquista automática realmente concluída para a exibição do elo.
-        // Isso evita mostrar a próxima progressão (futura) ao lado do perfil.
-        if (result.rankComplete?.automaticCompleted?.name) {
-            window.currentUserEloName = String(result.rankComplete.automaticCompleted.name || '').trim().toLowerCase();
-        } else if (result.rankComplete?.automatic?.name) {
+        // Usar a progressão automática atual; automaticCompleted representa o elo anterior.
+        if (result.rankComplete?.automatic?.name) {
             window.currentUserEloName = String(result.rankComplete.automatic.name || '').trim().toLowerCase();
+        } else if (result.rankComplete?.automaticCompleted?.name) {
+            window.currentUserEloName = String(result.rankComplete.automaticCompleted.name || '').trim().toLowerCase();
         }
 
         // Admin button
@@ -4301,8 +4300,8 @@ function refreshPrimaryRankBadge() {
     }
 
     if (!rankParaExibir || !rankParaExibir.name) {
-        const autoRank = result.rankComplete?.automaticCompleted
-            || result.rankComplete?.automatic
+        const autoRank = result.rankComplete?.automatic
+            || result.rankComplete?.automaticCompleted
             || (result.rank?.isCustom !== true && !isFounderAchievementRank(result.rank) ? result.rank : null);
         if (autoRank && autoRank.name) {
             rankParaExibir = autoRank;
@@ -4672,15 +4671,13 @@ function renderRankHistory(history, rankProgress = {}) {
     ]);
 
     // CONQUISTAS: usar o rank já resolvido pelo backend/loader como referência principal.
-    // Evitar trocar essa referência para a próxima progressão automática (ex.: Membro Novato)
-    // quando a conta já está em Membro Inicial ou outro rank concluído.
     const autoEloName = String(window.currentUserEloName || '').trim().toLowerCase();
-    const preferredCompletedRank = currentRankComplete?.automaticCompleted
-        || currentRankComplete?.automatic
+    const preferredCurrentRank = currentRankComplete?.automatic
+        || currentRankComplete?.automaticCompleted
         || null;
-    const eloAtual = preferredCompletedRank
-        ? (findAutoProgressionRankByName(String(preferredCompletedRank.name || '').trim().toLowerCase())
-            || preferredCompletedRank)
+    const eloAtual = preferredCurrentRank
+        ? (findAutoProgressionRankByName(String(preferredCurrentRank.name || '').trim().toLowerCase())
+            || preferredCurrentRank)
         : (autoEloName
             ? (conquistasAutomaticas.find(rank => normalizeAchievementNameKey(rank.name || '') === autoEloName)
                 || findAutoProgressionRankByName(autoEloName)
@@ -4772,7 +4769,8 @@ function renderRankHistory(history, rankProgress = {}) {
     
     // Só permitir que Membro Beta substitua a progressão
     const membroBetaRankForDisplay = (currentCustomRanksForRender || []).find(rank => {
-        return String(rank?.name || '').trim().toLowerCase() === 'membro beta';
+        return String(rank?.name || '').trim().toLowerCase() === 'membro beta'
+            && selectedProfileRankIdsSet.has(Number(rank?.id));
     }) || null;
     // Verificar se Membro Novato foi desbloqueado
     const membroNovatoUnlocked = conquistasPassadas.some(rank => 
@@ -5072,24 +5070,12 @@ function renderRankHistory(history, rankProgress = {}) {
         return 'Conquista especial';
     }
 
-    const currentProgressionForDisplay = eloAtual && String(eloAtual.name || '').trim().toLowerCase() !== 'membro inicial'
-        ? eloAtual
-        : ALL_RANKS.find(rank => String(rank.name).trim().toLowerCase() === 'membro inicial');
-    const completedProgressionEntries = progressionAchievementCards
-        .filter((entry) => {
-            if (!entry?.achieved || !entry.rank) return false;
-            const rankName = String(entry.rank.name || '').trim().toLowerCase();
-            return rankName !== 'membro beta';
-        })
-        .map((entry) => ({ rank: entry.rank, achieved: true }));
-    (currentCustomRanksForRender || [])
-        .filter((rank) => {
-            const rankName = String(rank?.name || '').trim().toLowerCase();
-            return rankName !== 'membro beta'
-                && (String(rank?.rankGroup || '').trim().toLowerCase() === 'progression'
-                    || progressionDisplayOrder.has(rankName));
-        })
-        .forEach((rank) => completedProgressionEntries.push({ rank, achieved: true }));
+    const currentProgressionName = String(eloAtual?.name || '').trim().toLowerCase();
+    const currentProgressionForDisplay = membroBetaRankForDisplay
+        || (currentProgressionName === 'membro inicial'
+            ? membroInicialForDisplay || eloAtual
+            : eloAtual)
+        || ALL_RANKS.find(rank => String(rank.name).trim().toLowerCase() === 'membro inicial');
 
     const conquistasSectionHTML = `
         <div style="padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(236, 72, 153, 0.35); background: rgba(236, 72, 153, 0.08); color: #F9A8D4; font-size: 12px; font-weight: 600; margin-bottom: 16px;">
@@ -5105,14 +5091,11 @@ function renderRankHistory(history, rankProgress = {}) {
                 entriesByName.set(rankNameKey, { rank, achieved: true, ...extra });
             };
 
-            if (membroBetaRankForDisplay) {
-                addEntry(membroBetaRankForDisplay, { isBetaSelection: true });
+            if (currentProgressionForDisplay) {
+                addEntry(currentProgressionForDisplay, {
+                    isBetaSelection: currentProgressionForDisplay === membroBetaRankForDisplay
+                });
             }
-
-            completedProgressionEntries.forEach(({ rank, ...entry }) => addEntry(rank, entry));
-            if (currentProgressionForDisplay) addEntry(currentProgressionForDisplay);
-
-            if (membroInicialForDisplay) addEntry(membroInicialForDisplay);
             return Array.from(entriesByName.values()).sort((a, b) => {
                 const orderFor = (entry) => entry.isBetaSelection
                     ? -1
@@ -6138,8 +6121,8 @@ async function loadSelectedRanksDisplay() {
         );
         const profileResult = window.currentProfileRenderResult || {};
         const currentProgressionRank = !hasBetaProgressionOverrideSelected
-            ? profileResult?.rankComplete?.automaticCompleted
-                || profileResult?.rankComplete?.automatic
+            ? profileResult?.rankComplete?.automatic
+                || profileResult?.rankComplete?.automaticCompleted
                 || (profileResult?.rank?.isCustom !== true ? profileResult?.rank : null)
             : null;
         const currentProgressionName = String(currentProgressionRank?.name || '').trim();
