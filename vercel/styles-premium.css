@@ -1,4 +1,4 @@
-﻿* {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -2841,6 +2841,145 @@ footer p {
     }
 }
 
+/* Keep the ambience while stopping costly, constantly moving background layers. */
+.animated-background::before,
+.animated-background::after,
+.animated-background .smoke-particle,
+.animated-background .light-flicker,
+.animated-background .cloud,
+.animated-background .star {
+    animation: none !important;
+}
 
+.animated-background .cloud {
+    filter: blur(28px);
+}
 
+@media (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+    }
 
+    .animated-background .smoke-particle,
+    .animated-background .light-flicker,
+    .animated-background .cloud,
+    .animated-background .star {
+        display: none !important;
+    }
+
+    header {
+        padding: 24px 12px;
+        margin-bottom: 20px;
+    }
+
+    header,
+    header *,
+    footer,
+    .navbar {
+        animation: none !important;
+        transition: none !important;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+
+    .navbar-container {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 12px;
+    }
+
+    .nav-links {
+        position: static;
+        order: 3;
+        flex: 1 1 100%;
+        width: 100%;
+        min-width: 0;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 6px;
+        margin-top: 4px;
+        max-height: none;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 2px 0 6px;
+        background: transparent;
+        box-shadow: none;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-links.active {
+        max-height: none;
+    }
+
+    .nav-link {
+        display: block;
+        flex: 0 0 auto;
+        padding: 10px 12px;
+        border-bottom: 0;
+        white-space: nowrap;
+    }
+
+    .hamburger {
+        display: none;
+    }
+
+    .navbar-buttons {
+        order: 2;
+        margin-left: auto;
+        gap: 8px;
+    }
+
+    .info-grid {
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+
+    .info-card,
+    .info-card::before,
+    .info-card::after,
+    .info-card * {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .info-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .info-card::before,
+    .card-hero::before,
+    .card-hero::after {
+        display: none !important;
+    }
+
+    .info-card:hover {
+        transform: none;
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.3);
+    }
+
+    .info-card:hover .banner-img,
+    .info-card:hover .card-icon,
+    .info-card:hover .card-svg {
+        transform: none;
+        filter: none;
+    }
+
+    .card-svg {
+        filter: none;
+    }
+
+    :is(.profile-tag, .download-user-tag, .mini-profile-tag, .member-tag),
+    :is(.profile-tag, .download-user-tag, .mini-profile-tag, .member-tag)::before,
+    :is(.profile-tag, .download-user-tag, .mini-profile-tag, .member-tag)::after {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .profile-tag .tag-fx-canvas {
+        display: none !important;
+    }
+}
