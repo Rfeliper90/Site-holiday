@@ -1470,6 +1470,9 @@ const tagFxInstances = new Map();
 let tagFxNoiseCanvas = null;
 let tagFxNoiseCtx = null;
 let tagFxLoopHandle = null;
+const tagFxMotionQuery = window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce), (max-width: 768px)')
+    : null;
 
 function ensureTagFxNoiseCanvas() {
     if (tagFxNoiseCanvas) return;
@@ -1633,9 +1636,9 @@ function startTagFxLoop() {
     if (window.ProfileAnimationPreferences?.getMode?.() === 'off') return;
     if (tagFxLoopHandle) return;
     ensureTagFxNoiseCanvas();
-    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const tick = (time) => {
+        const reduceMotion = Boolean(tagFxMotionQuery?.matches);
         let hasActive = false;
         tagFxInstances.forEach((instance, el) => {
             if (!el.isConnected) {
@@ -1665,6 +1668,22 @@ function stopTagFxLoop() {
     tagFxInstances.forEach((instance) => {
         instance.ctx?.clearRect(0, 0, instance.canvas.width, instance.canvas.height);
     });
+}
+
+if (tagFxMotionQuery) {
+    const syncTagFxMotion = () => {
+        if (tagFxMotionQuery.matches) {
+            stopTagFxLoop();
+        } else {
+            startTagFxLoop();
+        }
+    };
+
+    if (typeof tagFxMotionQuery.addEventListener === 'function') {
+        tagFxMotionQuery.addEventListener('change', syncTagFxMotion);
+    } else {
+        tagFxMotionQuery.addListener(syncTagFxMotion);
+    }
 }
 
 window.addEventListener('profile-animation-mode-change', (event) => {
@@ -3634,9 +3653,11 @@ function initializeInboxControls() {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('Profile DOMContentLoaded fired');
     console.log('localStorage keys:', Object.keys(localStorage));
+    console.log('localStorage content:', JSON.stringify(localStorage));
 
     const token = AuthAPI.getToken();
     console.log('Token found:', token ? 'YES (length: ' + token.length + ')' : 'NO');
+    console.log('Token value:', token);
     
     if (!token) {
         console.log('Redirecionando para login...');
