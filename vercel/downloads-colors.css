@@ -2627,3 +2627,47 @@
         animation: none;
     }
 }
+
+.download-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 470px;
+}
+
+@media (max-width: 768px) {
+    .download-card {
+        min-height: 0;
+        padding: 14px;
+    }
+
+    .animated-download-card,
+    .animated-download-card::before,
+    .animated-download-card::after,
+    .animated-download-card *,
+    .mini-profile-card,
+    .mini-profile-card::before,
+    .mini-profile-card::after,
+    .mini-profile-card * {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .animated-download-card,
+    .mini-profile-card {
+        transform: none !important;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+
+    .animated-download-card::before,
+    .animated-download-card::after {
+        filter: none;
+    }
+
+    .mini-profile-card {
+        padding: 18px;
+    }
+
+    .mini-profile-card > * {
+        transform: none !important;
+    }
+}
