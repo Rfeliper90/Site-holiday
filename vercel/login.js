@@ -1,4 +1,4 @@
-﻿// ========== LOGIN SCRIPT v2 - SUPER SIMPLES ==========
+// ========== LOGIN SCRIPT v2 - SUPER SIMPLES ==========
 
 const VISIBILITY_ICON_EYE = `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -415,11 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (twoFactorMethodEmailBtn) {
-        twoFactorMethodEmailBtn.addEventListener('click', async () => {
+        twoFactorMethodEmailBtn.addEventListener('click', () => {
             setTwoFactorMethod('email');
             clearTwoFactorInfo();
             formError.textContent = '';
-            await sendTwoFactorEmailCode();
         });
     }
 
