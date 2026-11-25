@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Perfil - HOLIDAY Guild</title>
+    <title>Login - HOLIDAY Guild</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles-premium.css?v=20261124-mobile-performance-1">
-    <link rel="stylesheet" href="profile.css?v=20261122-giphy-cover-1">
-    <link rel="stylesheet" href="profile-animation-preferences.css?v=20261122-account-motion-1">
+    <link rel="stylesheet" href="styles-premium.css?v=20260315-5">
+    <link rel="stylesheet" href="auth.css?v=20261115-2">
 </head>
 <body>
     <div class="animated-background">
@@ -33,789 +32,125 @@
         <div class="star star-bg-5"></div>
     </div>
 
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <h1>GUILD HOLIDAY</h1>
-                <p>Seu Perfil</p>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>HOLIDAY GUILD</h1>
+                <p>Bem-vindo a nossa comunidade</p>
             </div>
-        </div>
-    </header>
 
-    <nav class="navbar">
-        <div class="container navbar-container">
-            <div class="nav-links">
-                <a href="index.html" class="nav-link">In&iacute;cio</a>
-                <a href="dicas.html" class="nav-link">Comandos & Dicas</a>
-                <a href="lag.html" class="nav-link">Customiza&ccedil;&atilde;o</a>
-                <a href="downloads.html" class="nav-link">Downloads</a>
-                <a href="members.html" class="nav-link" style="display: none;">Membros</a>
-                <a href="profile.html" class="nav-link active">Perfil</a>
-            </div>
-            <div class="navbar-buttons">
-                <a href="https://chat.whatsapp.com/EDqaY8udJmFCTVCTex3b5p" class="btn-navbar btn-whatsapp icon-btn tooltip-theme" target="_blank" aria-label="WhatsApp" data-tooltip="WhatsApp">
-                    <img src="/imagens/wp.png" alt="WhatsApp" class="navbar-icon" width="16" height="16">
-                </a>
-                <a href="https://discord.gg/KEc4ZdR3" class="btn-navbar btn-discord icon-btn tooltip-theme" target="_blank" aria-label="Discord" data-tooltip="Discord">
-                    <img src="/imagens/Discord.png" alt="Discord" class="navbar-icon" width="16" height="16">
-                </a>
-                <button id="notificationBell" class="btn-navbar btn-notifications icon-btn tooltip-theme" style="position: relative; display: none;" aria-label="Notifica&ccedil;&otilde;es" data-tooltip="Notifica&ccedil;&otilde;es">
-                    <img src="/imagens/Sino.png" alt="Notifica&ccedil;&otilde;es" class="navbar-icon" width="16" height="16">
-                    <span id="notificationBadge" class="notification-badge" style="display: none;"></span>
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="nickname">Nickname ou E-mail</label>
+                    <input type="text" id="nickname" name="nickname" required placeholder="Seu nickname ou e-mail">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="password" name="password" required placeholder="Sua senha">
+                        <button type="button" id="togglePassword" class="password-toggle" aria-label="Mostrar senha" title="Mostrar senha"></button>
+                    </div>
+                </div>
+
+                <div class="form-group" id="twoFactorGroup" style="display: none;">
+                    <label for="twoFactorCode" id="twoFactorCodeLabel">C&oacute;digo 2FA</label>
+                    <div id="twoFactorMethodGroup" class="twofactor-method-group" style="display: none;">
+                        <button type="button" id="twoFactorMethodAuthenticator" class="twofactor-method-btn active">Authenticator</button>
+                        <button type="button" id="twoFactorMethodEmail" class="twofactor-method-btn">C&oacute;digo por e-mail</button>
+                    </div>
+                    <input type="text" id="twoFactorCode" name="twoFactorCode" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="Digite os 6 d&iacute;gitos">
+                    <button type="button" id="sendTwoFactorEmailBtn" class="twofactor-email-btn" style="display: none;">Enviar código por e-mail</button>
+                    <div id="twoFactorInfo" class="success-message" style="display: none;"></div>
+                </div>
+
+                <div class="form-options">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #999;">
+                        <input type="checkbox" id="rememberAccount" style="cursor: pointer; width: 16px; height: 16px;">
+                        <span>Lembrar essa conta</span>
+                    </label>
+                    <a href="forgot-password.html" class="forgot-link">Esqueceu a senha?</a>
+                </div>
+
+                <button type="submit" class="btn-submit">Entrar</button>
+                <div id="formError" class="error-message"></div>
+                <button type="button" id="resendVerificationBtn" class="resend-verification-btn" style="display: none;">
+                    Reenviar código de verificação
                 </button>
-                <button id="profileCardBtn" class="btn-navbar icon-btn tooltip-theme" style="display: none; position: relative;" aria-label="Perfil" data-tooltip="Perfil">
-                    <img id="profileCardAvatar" src="/imagens/logo.png" alt="Perfil" class="navbar-icon" width="20" height="20" style="border-radius: 50%; border: 2px solid #EC4899;">
-                </button>
-                <a href="login.html" class="btn-navbar btn-login icon-btn tooltip-theme" aria-label="Login" data-tooltip="Login">
-                    <img src="/imagens/login.png" alt="Login" class="navbar-icon" width="16" height="16">
-                </a>
-                <button id="logoutBtn" class="btn-navbar btn-logout icon-btn tooltip-theme" style="display: none;" aria-label="Sair" data-tooltip="Sair">
-                    <img src="/imagens/Sair.png" alt="Sair" class="navbar-icon" width="16" height="16">
-                </button>
-            </div>
-        </div>
-    </nav>
+                <div id="verificationAssistInfo" class="success-message" style="display: none;"></div>
+            </form>
 
-    <main class="container">
-        <div id="loadingScreen" class="loading-screen">
-            <div class="spinner"></div>
-            <p>Carregando perfil...</p>
-        </div>
-
-        <div id="profileContent" class="profile-content" style="display: none;">
-            <!-- Informa&ccedil;&otilde;es Principais -->
-            <div class="profile-main">
-                <div class="profile-avatar-section">
-                    <div class="profile-avatar-wrap no-avatar">
-                        <div class="profile-avatar" id="profileAvatar"></div>
-                        <div class="avatar-ring-actions">
-                            <button type="button" id="avatarUploadTriggerBtn" class="avatar-upload-label avatar-arc-btn avatar-arc-upload" aria-label="Alterar imagem"></button>
-                            <span class="avatar-action-tooltip avatar-upload-tooltip" role="tooltip" aria-hidden="true">Alterar imagem</span>
-                            <button type="button" id="removeAvatarBtn" class="avatar-remove-btn avatar-arc-btn avatar-arc-remove" aria-label="Remover avatar"></button>
-                            <span class="avatar-action-tooltip avatar-remove-tooltip" role="tooltip" aria-hidden="true">Remover avatar</span>
-                        </div>
-                    </div>
-                    <input type="file" id="avatarInput" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" style="display: none;">
-                </div>
-
-                <div class="profile-info">
-                    <h1 id="profileUsername">Username</h1>
-                    
-                    <!-- conquista Progressivo + conquistas Automáticos + Customizáveis + Minhas Conquistas -->
-                    <div class="rank-display">
-                        <!-- Label Minhas Conquistas -->
-                        <div class="rank-header">
-                            <div class="rank-title">
-                                <p id="achievementsLabel" class="conquistas-label" style="display: none;">Minhas Conquistas</p>
-                                <span id="rankOrderModeTag" class="rank-order-tag" style="display: none;">Modo organizar</span>
-                            </div>
-                            <div class="rank-actions">
-                                <button id="toggleRankOrderBtn" type="button" class="rank-order-btn tooltip-theme" style="display: none;">Minhas conquistas</button>
-                            </div>
-                        </div>
-                        <p id="rankOrderHint" class="rank-order-hint" style="display: none;">Arraste e solte para organizar. Clique em salvar ao terminar.</p>
-                        
-                        <!-- Linha dos conquistas -->
-                        <div class="ranks-container">
-                            <div class="rank-badge" id="rankBadge" style="display: none;">
-                                <span id="rankName"></span>
-                            </div>
-                            <div class="automatic-ranks-inline" id="automaticRanksInline"></div>
-                            <div class="custom-ranks-inline" id="customRanksInline"></div>
-                            <div id="selectedAchievementsSection" style="display: none; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(236, 72, 153, 0.5); background: rgba(236, 72, 153, 0.1); margin-top: 12px;">
-                                <div id="selectedAchievementsDisplay" class="selected-achievements-display"></div>
-                            </div>
-                        </div>
-                        <p id="rankDescription" class="rank-description" style="display: none;"></p>
-                    </div>
-
-                    <div class="email-verification-row">
-                        <div class="email-display">
-                            <p class="profile-email" id="profileEmail">email@example.com</p>
-                            <button type="button" id="toggleEmailBtn" class="toggle-visibility-btn tooltip-theme" aria-label="Mostrar e-mail" data-tooltip="Mostrar e-mail"></button>
-                        </div>
-                        <span id="emailVerificationStatus" class="verification-badge basic" style="display: none;">Status do e-mail</span>
-                    </div>
-                    <p class="profile-joined" id="profileJoined">Membro desde: --</p>
-                </div>
-
-                <div class="profile-side-controls">
-                    <div class="profile-top-tools">
-                        <button id="missionsBtn" type="button" class="btn-secondary">Missões</button>
-                        <button id="inboxBtn" class="btn-secondary" style="display: none;">Caixa de entrada</button>
-                    </div>
-                    <div class="profile-actions">
-                        <button id="editBtn" class="btn-primary">Editar Perfil</button>
-                        <button id="animatedProfileBtn" class="btn-secondary btn-animated-profile" style="display: none;">Perfil Animado</button>
-                        <button id="adminBtn" class="btn-admin" style="display: none;">Painel Admin</button>
-                    </div>
-                </div>
+            <div class="google-auth-section">
+                <div class="auth-divider">ou</div>
+                <div id="googleSignInButton" class="google-signin-button"></div>
+                <p id="googleAuthStatus" class="google-auth-status" role="status" aria-live="polite"></p>
             </div>
 
-            <!-- Minhas conquistas -->
-            <div class="profile-section">
-                <h2>Minhas conquistas</h2>
-                <div class="ranks-history" id="ranksHistory">
-                    <p>Carregando histórico...</p>
-                </div>
-                <div id="profileTaglineDisplayBottom" class="profile-tagline-display mini-profile-tagline"></div>
-            </div>
-
-        </div>
-    </main>
-
-    <div id="missionsModal" class="modal" style="display: none;">
-        <div class="modal-content missions-modal-content">
-            <span class="close">&times;</span>
-            <div id="missionsSection" class="missions-section missions-section-modal">
-                <div class="missions-section-header">
-                    <div>
-                        <h2>Missões do Usuário</h2>
-                        <p class="missions-section-subtitle">Aceite missões, conclua objetivos e desbloqueie novas funções do seu perfil.</p>
-                    </div>
-                    <div id="missionsSummary" class="missions-summary-badge">Carregando...</div>
-                </div>
-                <div id="missionsList" class="missions-grid">
-                    <p class="missions-loading">Carregando missões...</p>
-                </div>
+            <div class="auth-footer">
+                <p>Não tem conta? <a href="signup.html">Cadastre-se</a></p>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Edicao de Perfil -->
-    <div id="editModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Configura&ccedil;&otilde;es da Conta</h2>
+    <div id="googleProfileModal" class="google-profile-overlay" style="display: none;">
+        <form id="googleProfileForm" class="google-profile-card">
+            <h2>Complete seu cadastro</h2>
+            <p>Para criar sua conta, informe seu nickname e data de nascimento. O cadastro é permitido apenas para maiores de 18 anos.</p>
+            <label for="googleNickname">Nickname</label>
+            <input id="googleNickname" name="nickname" minlength="3" maxlength="20" pattern="[A-Za-z0-9._-]{3,20}" autocomplete="nickname" required>
+            <label for="googleBirthDate">Data de nascimento</label>
+            <input id="googleBirthDate" name="birthDate" type="date" required>
+            <label class="google-terms-row" for="googleTermsAccepted">
+                <input id="googleTermsAccepted" name="termsAccepted" type="checkbox" required>
+                <span>Li e aceito os <a href="termos.html" target="_blank" rel="noopener noreferrer">Termos de Uso da HOLIDAY Guild</a>.</span>
+            </label>
+            <p id="googleProfileError" class="google-auth-status" role="alert"></p>
+            <div class="google-profile-actions">
+                <button type="button" id="cancelGoogleProfile">Cancelar</button>
+                <button type="submit" id="completeGoogleProfile">Criar conta</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal de Verificação de Email -->
+    <div id="verifyModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="auth-card" style="width: 90%; max-width: 500px;">
+            <div class="auth-header">
+                <h2 style="color: #EC4899; margin: 0;">Verifique seu E-mail</h2>
+            </div>
+            <p style="text-align: center; color: #999; margin: 20px 0;">Enviamos um código de 6 dígitos para <strong id="verifyEmail" style="color: #EC4899;"></strong></p>
+            <p style="text-align: center; color: #BBB; margin: 10px 0; font-size: 13px;">Verifique sua caixa de entrada (e a pasta de spam)</p>
             
-            <!-- Abas -->
-            <div class="modal-tabs">
-                <button class="tab-btn active" data-tab="edit-tab">Perfil</button>
-                <button class="tab-btn" data-tab="conquistas-tab">Minhas Conquistas</button>
-                <button class="tab-btn" data-tab="postages-tab">Minhas Postagens</button>
-                <button class="tab-btn" data-tab="password-tab">Seguran&ccedil;a</button>
-                <button class="tab-btn" data-tab="advanced-tab">Op&ccedil;&otilde;es avan&ccedil;adas</button>
-            </div>
-
-            <form id="editProfileForm">
-                <!-- Aba 1: Editar Perfil -->
-                <div id="edit-tab" class="tab-content active">
-                    <div class="form-group">
-                        <label for="editFirstName">Nome</label>
-                        <input type="text" id="editFirstName" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="editLastName">Sobrenome</label>
-                        <input type="text" id="editLastName" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="editNickname">Nickname</label>
-                        <input type="text" id="editNickname" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="editEmail">E-mail</label>
-                        <div class="email-field-wrapper">
-                            <input type="email" id="editEmail" readonly disabled>
-                                <button type="button" id="changeEmailBtn" class="btn-change-email">Alterar E-mail</button>
-                                <button type="button" id="sendVerifyCodeBtn" class="btn-send-code" style="display: none; margin-left: 8px;">Enviar Código</button>
-                                <!-- Botão removido daqui, agora só aparece no modal de alteração de e-mail -->
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="editBirthDate">Data de Nascimento</label>
-                        <input type="date" id="editBirthDate" readonly disabled>
-                        <small id="editBirthDateHint">A data de nascimento é bloqueada após o cadastro por segurança.</small>
-                    </div>
-
-                    <button type="submit" class="btn-submit">Salvar Altera&ccedil;&otilde;es</button>
-                    <span class="error-message" id="editError"></span>
+            <form id="verifyForm" class="auth-form" style="margin-top: 30px;">
+                <div class="form-group">
+                    <label for="verificationCode" style="display: flex; align-items: center; gap: 6px;">
+                        Já tenho um código
+                    </label>
+                    <input type="text" id="verificationCode" maxlength="6" placeholder="000000" inputmode="numeric" style="text-align: center; font-size: 24px; letter-spacing: 5px;">
                 </div>
-
-                <!-- Aba: Opções avançadas -->
-                <div id="advanced-tab" class="tab-content">
-                    <h3 style="margin-top: 0; color: #EC4899;">Op&ccedil;&otilde;es avan&ccedil;adas</h3>
-
-                    <div class="notif-settings-box" style="margin-top: 14px;">
-                        <h4 class="notif-settings-title">Privacidade</h4>
-                        <label class="notif-setting-item">
-                            <input type="checkbox" id="showFullNameInMiniProfileToggle" checked>
-                            <span>Mostrar meu nome completo no mini perfil</span>
-                        </label>
-                        <div style="margin-top: 8px; color: rgba(255,255,255,0.65); font-size: 12px; line-height: 1.35;">
-                            Ex.: no card que aparece em <strong>Downloads</strong> ao clicar no seu @.
-                        </div>
-                    </div>
-
-                    <div class="notif-settings-box" style="margin-top: 14px;">
-                        <h4 class="notif-settings-title">Animações do perfil e dos cards</h4>
-                        <label class="notif-setting-item">
-                            <input type="checkbox" id="pauseProfileAnimationsToggle">
-                            <span>Pausar animações CSS</span>
-                        </label>
-                        <label class="notif-setting-item">
-                            <input type="checkbox" id="disableProfileEffectsToggle">
-                            <span>Desativar todos os efeitos dos cards de perfil e downloads</span>
-                        </label>
-                        <div style="margin-top: 8px; color: rgba(255,255,255,0.65); font-size: 12px; line-height: 1.35;">
-                            Escolha uma opção. Para voltar ao normal, desmarque a opção ativa. A preferência fica salva na sua conta.
-                        </div>
-                    </div>
-
-                    <div class="notif-settings-box" style="margin-top: 14px;">
-                        <h4 class="notif-settings-title">Notifica&ccedil;&otilde;es</h4>
-                        <label class="notif-setting-item">
-                            <input type="checkbox" id="disableCommentNotifications">
-                            <span>Desativar notifica&ccedil;&otilde;es de coment&aacute;rios</span>
-                        </label>
-                        <label class="notif-setting-item">
-                            <input type="checkbox" id="disableLikeNotifications">
-                            <span>Desativar notifica&ccedil;&otilde;es de likes</span>
-                        </label>
-                        <label class="notif-setting-item">
-                            <input type="checkbox" id="disableAchievementNotifications">
-                            <span>Desativar notifica&ccedil;&atilde;o de ganho de conquista</span>
-                        </label>                        <label class="notif-setting-item">
-                            <input type="checkbox" id="disableTeamEmailNotifications">
-                            <span>Desativar mensagens recebidas (e-mail) da equipe</span>
-                        </label>                        <label class="notif-setting-item all">
-                            <input type="checkbox" id="disableAllNotifications">
-                            <span>Desativar todas as notifica&ccedil;&otilde;es</span>
-                        </label>
-                    </div>
-
-                    <div id="adultPostsPreferenceBox" style="margin: 14px 0 0 0; padding: 12px; border-radius: 8px; border: 1px solid rgba(236, 72, 153, 0.45); background: rgba(0, 0, 0, 0.2);">
-                        <label for="showAdultPostsToggle" style="display: inline-flex; align-items: center; gap: 8px; color: #FBCFE8; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" id="showAdultPostsToggle">
-                            Ver postagens +18 anos
-                        </label>
-                        <p id="showAdultPostsHint" style="margin: 8px 0 0 0; color: rgba(255,255,255,0.7); font-size: 12px;">Carregando configura&ccedil;&atilde;o +18...</p>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 14px;">
-                        <div class="form-label-row form-label-row-tagline">
-                            <label for="editProfileTaglineRich">Frase do Perfil</label>
-                            <div class="tagline-actions">
-                                <button type="button" id="insertTaglineLinkBtn" class="btn-random-tagline btn-insert-link-tagline">Inserir Link</button>
-                                <button type="button" id="randomTaglineBtn" class="btn-random-tagline">Frase Aleat&oacute;ria</button>
-                                <button type="button" id="clearTaglineBtn" class="btn-random-tagline btn-clear-tagline">Limpar</button>
-                            </div>
-                        </div>
-                        <div
-                            id="editProfileTaglineRich"
-                            class="tagline-rich-editor"
-                            contenteditable="true"
-                            role="textbox"
-                            aria-multiline="true"
-                            data-placeholder="Digite sua frase (opcional) ou use Frase Aleat&oacute;ria"
-                        ></div>
-                        <textarea id="editProfileTagline" maxlength="100" rows="2" hidden></textarea>
-                        <small id="taglineCount">0/100</small>
-                    </div>
-
-                    <button type="submit" class="btn-submit">Salvar Altera&ccedil;&otilde;es</button>
-                </div>
+                <button type="submit" class="btn-submit" style="background: linear-gradient(135deg, #EC4899, #D946EF);">Verificar Código</button>
             </form>
-
-            <!-- Aba: Minhas Conquistas -->
-            <div id="conquistas-tab" class="tab-content">
-                <h3 style="margin-top: 0; color: #EC4899;">Configuração de Conquistas</h3>
-
-                <div class="conquista-expand-options">
-                    <button type="button" class="conquista-expand-btn active" data-target="conquista-conquistas-section">Minhas Conquistas</button>
-                    <button type="button" class="conquista-expand-btn" data-target="conquista-postagens-section">Conquistas de Postagens</button>
-                    <button type="button" class="conquista-expand-btn" data-target="conquista-likes-section">Conquistas de Likes</button>
-                </div>
-
-                <div id="conquista-conquistas-section" class="conquista-expand-section active">
-                    <p class="conquista-section-subtitle">Conquistas exibidas atualmente no seu perfil e card.</p>
-                    <div id="myConquestsList" class="conquista-cards-grid">
-                        <p style="margin: 0; color: rgba(255,255,255,0.55);">Carregando conquistas...</p>
-                    </div>
-                </div>
-
-                <div id="conquista-postagens-section" class="conquista-expand-section">
-                    <p class="conquista-section-subtitle">Conquistas de progressão por quantidade de postagens.</p>
-
-                    <div class="conquista-stats-grid">
-                        <div class="conquista-stat-box">
-                            <div class="conquista-stat-value"><span id="totalPostages">0</span></div>
-                            <div class="conquista-stat-label">Postagens Feitas</div>
-                        </div>
-                        <div class="conquista-stat-box">
-                            <div class="conquista-stat-value"><span id="totalLikesReceived">0</span></div>
-                            <div class="conquista-stat-label">Likes Recebidos</div>
-                        </div>
-                        <div class="conquista-stat-box">
-                            <div class="conquista-stat-value"><span id="totalHeartsReceived">0</span></div>
-                            <div class="conquista-stat-label">Cora&ccedil;&otilde;es</div>
-                        </div>
-                    </div>
-
-                    <div class="conquista-current-card" id="currentPostageRank">
-                        <div class="conquista-current-icon" id="currentRankIcon">?</div>
-                        <div class="conquista-current-info">
-                            <h4 id="currentRankName">Sem conquista</h4>
-                            <p id="currentRankDesc">Faça sua primeira postagem</p>
-                            <p id="nextPostageRankHint">Faça sua primeira postagem para desbloquear a primeira conquista.</p>
-                        </div>
-                    </div>
-
-                    <div class="conquista-progress-box">
-                        <div class="conquista-progress-row">
-                            <span>Progresso:</span>
-                            <span><span id="progressCurrent">0</span>/<span id="progressNeeded">5</span></span>
-                        </div>
-                        <div class="conquista-progress-track">
-                            <div id="progressBar" class="conquista-progress-fill"></div>
-                        </div>
-                    </div>
-
-                    <h4 class="conquista-list-title">Conquistas de Postagens</h4>
-                    <div id="allPostageRanks" class="conquista-cards-grid"></div>
-                </div>
-
-                <div id="conquista-likes-section" class="conquista-expand-section">
-                    <p class="conquista-section-subtitle">Conquistas de progressão por likes acumulados no histórico.</p>
-
-                    <div class="conquista-stats-grid">
-                        <div class="conquista-stat-box">
-                            <div class="conquista-stat-value"><span id="totalLikesHistory">0</span></div>
-                            <div class="conquista-stat-label">Likes Hist&oacute;ricos</div>
-                        </div>
-                        <div class="conquista-stat-box">
-                            <div class="conquista-stat-value"><span id="totalLikesCurrent">0</span></div>
-                            <div class="conquista-stat-label">Likes Atuais</div>
-                        </div>
-                        <div class="conquista-stat-box">
-                            <div class="conquista-stat-value"><span id="totalHeartsLikesTab">0</span></div>
-                            <div class="conquista-stat-label">Cora&ccedil;&otilde;es</div>
-                        </div>
-                    </div>
-
-                    <div class="conquista-current-card">
-                        <div class="conquista-current-icon" id="currentLikeRankIcon">L0</div>
-                        <div class="conquista-current-info">
-                            <h4 id="currentLikeRankName">Sem conquista de Likes</h4>
-                            <p id="currentLikeRankDesc">Ganhe likes para desbloquear suas conquistas.</p>
-                            <p id="nextLikeRankHint">Faltam 3 likes para a primeira conquista.</p>
-                        </div>
-                    </div>
-
-                    <div class="conquista-progress-box">
-                        <div class="conquista-progress-row">
-                            <span>Progresso:</span>
-                            <span><span id="likeProgressCurrent">0</span>/<span id="likeProgressNeeded">3</span></span>
-                        </div>
-                        <div class="conquista-progress-track">
-                            <div id="likeProgressBar" class="conquista-progress-fill likes"></div>
-                        </div>
-                    </div>
-
-                    <h4 class="conquista-list-title likes">Conquistas de Likes</h4>
-                    <div id="allLikeRanks" class="conquista-cards-grid"></div>
-                </div>
-            </div>
-
-            <!-- Aba: Minhas Postagens -->
-            <div id="postages-tab" class="tab-content">
-                <h3 style="margin-top: 0; color: #EC4899;">Minhas Postagens</h3>
-
-                <a href="downloads.html" style="display: inline-block; padding: 10px 20px; background: linear-gradient(135deg, #EC4899, #6B46C1); color: white; border-radius: 5px; text-decoration: none; font-weight: 600; margin-bottom: 20px;">Postar Nova Postagem</a>
-
-                <div id="myPostagesContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
-                    <p style="text-align: center; color: #999; grid-column: 1/-1; padding: 30px;">Carregando suas postagens...</p>
-                </div>
-            </div>
-
-
-            <div id="password-tab" class="tab-content">
-                <form id="changePasswordForm">
-                    <div class="form-group">
-                        <label for="currentPassword">Senha Atual</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="currentPassword" required>
-                            <button type="button" id="toggleCurrentPassword" class="password-toggle tooltip-theme" aria-label="Mostrar senha" data-tooltip="Mostrar senha"></button>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="newPassword">Nova Senha</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="newPassword" required placeholder="M&iacute;nimo 6 caracteres">
-                            <button type="button" id="toggleNewPassword" class="password-toggle tooltip-theme" aria-label="Mostrar senha" data-tooltip="Mostrar senha"></button>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="confirmPassword">Confirmar Nova Senha</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="confirmPassword" required>
-                            <button type="button" id="toggleConfirmPassword" class="password-toggle tooltip-theme" aria-label="Mostrar senha" data-tooltip="Mostrar senha"></button>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn-submit">Alterar Senha</button>
-                    <span class="error-message" id="passwordError"></span>
-                </form>
-
-                <div class="two-factor-box">
-                    <h3>Authenticator (2FA)</h3>
-                    <p class="two-factor-help">Opcional. Ao ativar, no login você pode validar por Authenticator ou por código enviado no e-mail.</p>
-
-                    <div class="two-factor-status-row">
-                        <span>Status:</span>
-                        <span id="twoFactorStatusBadge" class="two-factor-status off">Desativado</span>
-                    </div>
-
-                    <div id="twoFactorSettingsRow" class="two-factor-settings-row" style="display: none;">
-                        <label for="twoFactorRememberDays">Pedir 2FA novamente após:</label>
-                        <select id="twoFactorRememberDays">
-                            <option value="0">Desativado (pedir sempre)</option>
-                            <option value="3">3 dias</option>
-                            <option value="7">7 dias</option>
-                            <option value="30">30 dias</option>
-                            <option value="90">90 dias</option>
-                        </select>
-                        <button type="button" id="saveTwoFactorSettingsBtn" class="two-factor-copy-btn">Salvar prazo</button>
-                    </div>
-
-                    <button type="button" id="setupTwoFactorBtn" class="btn-submit two-factor-action-btn">Configurar Authenticator</button>
-
-                    <div id="twoFactorSetupPanel" class="two-factor-panel" style="display: none;">
-                        <p class="two-factor-step">1. Clique em "Gerar QR Code" e escaneie no app Authenticator.</p>
-                        <div class="two-factor-qr-actions">
-                            <button type="button" id="generateTwoFactorQrBtn" class="two-factor-copy-btn">Gerar QR Code</button>
-                        </div>
-                        <div id="twoFactorQrWrap" class="two-factor-qr-wrap" style="display: none;">
-                            <img id="twoFactorQrImage" class="two-factor-qr-image" src="" alt="QR Code do Authenticator">
-                        </div>
-                        <p class="two-factor-step">2. Digite abaixo o código gerado no app para ativar.</p>
-
-                        <div class="form-group">
-                            <label for="twoFactorEnableCode">Código de Ativação</label>
-                            <input type="text" id="twoFactorEnableCode" maxlength="6" inputmode="numeric" placeholder="000000">
-                        </div>
-                        <button type="button" id="enableTwoFactorBtn" class="btn-submit two-factor-action-btn">Ativar 2FA</button>
-                    </div>
-
-                    <div id="twoFactorDisablePanel" class="two-factor-panel" style="display: none;">
-                        <button type="button" id="showDisableTwoFactorFormBtn" class="btn-submit two-factor-danger-btn">Desativar 2FA</button>
-                        <div id="disableTwoFactorFormWrap" style="display: none; margin-top: 12px;">
-                            <p class="two-factor-step">Para desativar, digite um código atual do app Authenticator.</p>
-                            <div class="form-group">
-                                <label for="twoFactorDisableCode">Código para Desativar</label>
-                                <input type="text" id="twoFactorDisableCode" maxlength="6" inputmode="numeric" placeholder="000000">
-                            </div>
-                            <button type="button" id="disableTwoFactorBtn" class="btn-submit two-factor-danger-btn">Confirmar desativação</button>
-                        </div>
-                    </div>
-
-                    <span class="error-message" id="twoFactorError"></span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Perfil Animado -->
-    <div id="animatedProfileModal" class="modal" style="display: none;">
-        <div class="modal-content animated-profile-modal-content">
-            <span class="close">&times;</span>
-            <h2>Perfil Animado</h2>
-            <p class="animated-profile-help">Escolha onde aplicar o card animado e selecione o tema visual.</p>
-
-            <div class="animated-profile-box">
-                <label class="animated-profile-toggle-row" for="animatedMiniProfileEnabledToggle">
-                    <input type="checkbox" id="animatedMiniProfileEnabledToggle">
-                    <span>Ativar card animado mini perfil</span>
-                </label>
-
-                <label class="animated-profile-toggle-row" for="animatedDownloadCardEnabledToggle">
-                    <input type="checkbox" id="animatedDownloadCardEnabledToggle">
-                    <span>Ativar card do download</span>
-                </label>
-
-                <div class="form-group">
-                    <label for="animatedProfileVisualModeSelect">Visual do card</label>
-                    <select id="animatedProfileVisualModeSelect">
-                        <option value="theme">Tema CSS</option>
-                        <option value="gif">GIF</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="animatedProfileThemeSelect">Tema do card</label>
-                    <select id="animatedProfileThemeSelect">
-                        <option value="auto">Automático</option>
-                        <option value="theme-aurora">Aurora</option>
-                        <option value="theme-prisma">Prisma</option>
-                        <option value="theme-pulse">Pulse</option>
-                        <option value="theme-comet">Cometa</option>
-                        <option value="theme-inferno">Fogo</option>
-                        <option value="theme-frost">Gelo</option>
-                        <option value="theme-voltage">Tempestade Elétrica</option>
-                        <option value="theme-emberstorm">Brasa Arcana</option>
-                        <option value="theme-blizzard">Blizzard</option>
-                        <option value="theme-neon-grid">Grid Neon</option>
-                        <option value="theme-liquid-metal">Metal Líquido</option>
-                        <option value="theme-void-rift">Fenda do Vazio</option>
-                        <option value="theme-solar-flare">Solar Flare</option>
-                        <option value="theme-toxic-mist">Névoa T&oacute;xica</option>
-                        <option value="theme-crystal-cave">Caverna Cristal</option>
-                        <option value="theme-glitchwave">Glitch Wave</option>
-                    </select>
-                </div>
-
-                <div id="animatedGifOptions" class="animated-gif-options" style="display: none;">
-                    <label for="animatedGifSearchInput">Buscar GIF</label>
-                    <div class="animated-gif-search-row">
-                        <input type="text" id="animatedGifSearchInput" placeholder="Ex: love, fire, ice...">
-                        <button type="button" id="animatedGifSearchBtn" class="btn-random-tagline">Buscar</button>
-                    </div>
-                    <div id="animatedGifResults" class="animated-gif-results"></div>
-                    <div class="animated-gif-results-footer">
-                        <button type="button" id="animatedGifSearchMoreBtn" class="btn-random-tagline" style="display: none;">Ver mais</button>
-                        <a class="animated-giphy-attribution" href="https://giphy.com/" target="_blank" rel="noopener noreferrer" aria-label="Powered by GIPHY">
-                            <img src="imagens/giphy/PoweredBy_200px-White_HorizLogo.png" alt="Powered by GIPHY">
-                        </a>
-                    </div>
-
-                    <label for="animatedCustomGifUrl" style="margin-top: 10px;">Ou use URL de GIF</label>
-                    <input type="url" id="animatedCustomGifUrl" placeholder="https://...gif">
-
-                    <label for="animatedCustomGifFile" style="margin-top: 10px;">Ou envie seu GIF</label>
-                    <div class="animated-gif-upload-row">
-                        <input type="file" id="animatedCustomGifFile" accept="image/gif">
-                        <button type="button" id="uploadAnimatedGifBtn" class="btn-random-tagline">Enviar GIF</button>
-                    </div>
-                    <small>Limite máximo: 15MB por GIF.</small>
-                </div>
-
-                <div class="animated-profile-preview-wrap">
-                    <p class="animated-profile-preview-title">Preview</p>
-                    <div id="animatedProfilePreviewCard" class="animated-profile-preview-card theme-aurora">
-                        <div class="animated-profile-preview-avatar"></div>
-                        <div class="animated-profile-preview-name">@SeuPerfil</div>
-                        <div class="animated-profile-preview-subtitle">Card animado ativo</div>
-                        <div class="animated-profile-preview-badges">
-                            <span>Fundador</span>
-                            <span>Initiate</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button type="button" id="saveAnimatedProfileBtn" class="btn-submit">Salvar Perfil Animado</button>
-                <span class="error-message" id="animatedProfileError"></span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Confirmação para Remover Avatar -->
-    <div id="avatarRemoveConfirmModal" class="modal" style="display: none;">
-        <div class="modal-content avatar-remove-confirm-content">
-            <span class="close" id="closeAvatarRemoveConfirmModal">&times;</span>
-            <h2>Remover avatar</h2>
-            <p class="avatar-remove-confirm-text">
-                Tem certeza que deseja remover seu avatar atual? Você pode enviar outro quando quiser.
-            </p>
-            <div class="avatar-remove-confirm-actions">
-                <button type="button" id="avatarRemoveCancelBtn" class="btn-secondary">Cancelar</button>
-                <button type="button" id="avatarRemoveConfirmBtn" class="btn-danger">Remover</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Ajuste de Avatar -->
-    <div id="avatarAdjustModal" class="modal" style="display: none;">
-        <div class="modal-content avatar-adjust-modal-content">
-            <span class="close" id="closeAvatarAdjustModal">&times;</span>
-            <h2>Ajustar avatar</h2>
-
-            <div class="avatar-adjust-preview-wrap">
-                <div id="avatarAdjustPreview" class="avatar-adjust-preview">
-                    <img id="avatarAdjustPreviewImage" class="avatar-adjust-preview-image" alt="Prévia do avatar">
-                    <div class="avatar-adjust-preview-ring"></div>
-                </div>
-            </div>
-
-            <div class="avatar-adjust-controls">
-                <div class="avatar-adjust-zoom-row">
-                    <label for="avatarAdjustZoom">Zoom</label>
-                    <input type="range" id="avatarAdjustZoom" min="1" max="3" step="0.01" value="1">
-                    <span id="avatarAdjustZoomValue">100%</span>
-                </div>
-                <button type="button" id="avatarAdjustResetBtn" class="btn-random-tagline btn-clear-tagline">Redefinir</button>
-            </div>
-
-            <small class="avatar-adjust-help">
-                Arraste a imagem na prévia para ajustar o enquadramento, ou solte um arquivo nela. GIF, PNG, JPG e WEBP são aceitos.
-            </small>
-            <span class="error-message" id="avatarAdjustError"></span>
-
-            <div class="avatar-adjust-actions">
-                <button type="button" id="avatarAdjustBrowseBtn" class="btn-secondary adjust-browse-btn">Buscar arquivo</button>
-                <button type="button" id="avatarAdjustCancelBtn" class="btn-secondary">Cancelar</button>
-                <button type="button" id="avatarAdjustApplyBtn" class="btn-primary">Aplicar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Altera&ccedil;&atilde;o de E-mail -->
-    <div id="changeEmailModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" id="closeChangeEmailModal">&times;</span>
-            <h2>Alterar E-mail</h2>
             
-            <form id="changeEmailForm">
-                <div class="form-group">
-                    <label>E-mail Atual</label>
-                    <input type="email" id="currentEmailDisplay" readonly disabled style="background: rgba(255,255,255,0.05); cursor: not-allowed;">
-                </div>
-
-                <div class="form-group">
-                    <label for="newEmailInput">Novo E-mail</label>
-                    <input type="email" id="newEmailInput" placeholder="Digite seu novo e-mail" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Código de Confirmação</label>
-                    <div class="code-input-wrapper">
-                        <input type="text" id="emailVerificationCode" placeholder="Código enviado para seu e-mail atual" maxlength="6" required>
-                        <button type="button" id="sendEmailCodeBtn" class="btn-send-code">Enviar Código</button>
-                    </div>
-                    <small style="color: rgba(255,255,255,0.5); margin-top: 5px; display: block;">Um código será enviado para seu e-mail atual</small>
-                </div>
-                   <div class="form-group" style="margin-top: 10px;">
-                       <div class="terms-check-row" style="display: flex; align-items: center; gap: 10px; user-select: none;">
-                           <input type="checkbox" id="noAccessToEmailCheckbox" style="accent-color: #EC4899; margin-right: 8px;">
-                           <span>Não tenho mais acesso ao e-mail</span>
-                       </div>
-                       <button type="button" id="requestEmailChangeBtnModal" class="btn-request-email-change" style="display:none; margin-top: 10px;">Pedir troca de e-mail</button>
-                       <small id="requestEmailChangeHint" style="display:none; color: #FBCFE8; margin-top: 6px;">Você poderá solicitar ao administrador a troca manual do e-mail.</small>
-                       <small id="emailChangeRequestStatus" style="display:none; color: #FDE68A; margin-top: 6px;">Seu pedido já está pendente. Aguarde a análise do administrador.</small>
-                   </div>
-                
-                <button type="submit" class="btn-submit">Confirmar Altera&ccedil;&atilde;o</button>
-                <span class="error-message" id="changeEmailError"></span>
-            </form>
+            <div style="display: flex; align-items: center; gap: 10px; margin: 20px 0; opacity: 0.6;">
+                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.2);"></div>
+                <span style="color: #999; font-size: 12px;">OU</span>
+                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.2);"></div>
+            </div>
+            
+            <div style="text-align: center;">
+                <p style="color: #BBB; font-size: 13px; margin-bottom: 10px;">Não recebeu o código?</p>
+                <button type="button" id="resendBtn" onclick="resendVerificationCode()" style="background: linear-gradient(135deg, #6B46C1, #8B5CF6); color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.3s ease;">Reenviar Código</button>
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <p id="verificationTimer" style="color: #6B46C1; font-size: 12px; margin: 5px 0; font-weight: bold;">Válido por 10:00</p>
+            </div>
+            
+            <span class="error-message" id="verifyError" style="display: block; text-align: center; margin-top: 15px;"></span>
         </div>
     </div>
 
-    <!-- Modal de Confirmação de E-mail -->
-    <div id="verifyEmailModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close" id="closeVerifyEmailModal">&times;</span>
-            <h2>Confirmar E-mail</h2>
-            <p style="color: rgba(255,255,255,0.75); margin-top: 6px; line-height: 1.4;">Enviamos um código para <strong id="verifyEmailDisplay">seu e-mail</strong>. Cole o código abaixo para confirmar sua conta.</p>
-
-            <form id="verifyEmailForm">
-                <div class="form-group">
-                    <label for="verifyEmailCodeInput">Código de Confirmação</label>
-                    <div class="code-input-wrapper">
-                        <input type="text" id="verifyEmailCodeInput" placeholder="Digite o código de 6 dígitos" maxlength="6" required>
-                        <button type="button" id="resendVerifyEmailBtn" class="btn-send-code">Reenviar Código</button>
-                    </div>
-                    <small style="color: rgba(255,255,255,0.5); margin-top: 5px; display: block;">O código é enviado para o e-mail atual da sua conta.</small>
-                </div>
-
-                <button type="submit" class="btn-submit">Confirmar E-mail</button>
-                <span class="error-message" id="verifyEmailError"></span>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal de Inserir Link na Frase -->
-    <div id="taglineLinkModal" class="modal tagline-link-modal" style="display: none;">
-        <div class="modal-content tagline-link-modal-content">
-            <button type="button" id="closeTaglineLinkModalBtn" class="tagline-link-close-btn" aria-label="Fechar modal de inserir link">&times;</button>
-            <h2>Inserir Link</h2>
-            <p class="tagline-link-selected-text">
-                Texto selecionado: <strong id="taglineLinkSelectedText"></strong>
-            </p>
-            <div class="form-group">
-                <label for="taglineLinkUrlInput">URL do link</label>
-                <input type="url" id="taglineLinkUrlInput" placeholder="https://seusite.com">
-            </div>
-            <span class="error-message" id="taglineLinkModalError"></span>
-            <div class="tagline-link-modal-actions">
-                <button type="button" id="taglineLinkCancelBtn" class="btn-secondary">Cancelar</button>
-                <button type="button" id="taglineLinkApplyBtn" class="btn-primary">Inserir</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="notificationInboxModal" class="modal" style="display: none;">
-        <div class="modal-content inbox-modal-content">
-            <div class="inbox-modal-header">
-                <div>
-                    <h2>Caixa de entrada</h2>
-                    <p id="inboxModeBadge" class="inbox-mode-badge" style="margin: 6px 0 0; font-size: 11px; font-weight: 700; color: #FBCFE8;">Modo: Visualização (sem deletar)</p>
-                </div>
-                <div class="inbox-header-actions">
-                    <button type="button" class="close inbox-close-btn" data-close-inbox="1" aria-label="Fechar">&times;</button>
-                </div>
-            </div>
-            <div id="notificationInboxSummary" class="inbox-summary"></div>
-            <div id="inboxSelectionActions" class="inbox-selection-actions" style="display: none;">
-                <label class="inbox-select-all-label">
-                    <input type="checkbox" id="selectAllInboxCheckbox">
-                    <span>Selecionar todos</span>
-                </label>
-                <button type="button" id="deleteSelectedInboxBtn" class="btn-secondary inbox-delete-btn danger">Apagar selecionadas</button>
-            </div>
-            <div id="notificationInboxList" class="inbox-list">
-                <p class="inbox-empty">Carregando...</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="inboxDeleteConfirmModal" class="modal" style="display: none;">
-        <div class="modal-content inbox-confirm-modal-content">
-            <div class="inbox-confirm-header">
-                <h3>Excluir mensagens</h3>
-                <button type="button" class="close inbox-close-btn" data-close-inbox-confirm="1" aria-label="Fechar">&times;</button>
-            </div>
-            <p id="inboxDeleteConfirmText" class="inbox-confirm-text">Deseja excluir as mensagens selecionadas?</p>
-            <div class="inbox-confirm-actions">
-                <button type="button" id="cancelInboxDeleteBtn" class="btn-secondary inbox-confirm-cancel-btn">Cancelar</button>
-                <button type="button" id="confirmInboxDeleteBtn" class="btn-secondary inbox-confirm-delete-btn">Excluir</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="inboxDetailModal" class="modal" style="display: none;">
-        <div class="modal-content inbox-detail-modal-content">
-            <div class="inbox-detail-header">
-                <div>
-                    <span id="inboxDetailType" class="inbox-type">Detalhe</span>
-                    <h3 id="inboxDetailTitle">Detalhes da mensagem</h3>
-                </div>
-                <button type="button" class="close inbox-close-btn" data-close-inbox-detail="1" aria-label="Fechar">&times;</button>
-            </div>
-            <div class="inbox-detail-meta">
-                <span id="inboxDetailAuthor"></span>
-                <span id="inboxDetailTime"></span>
-            </div>
-            <div id="inboxDetailContext" class="inbox-detail-context" style="display: none;"></div>
-            <div id="inboxDetailMessage" class="inbox-detail-message"></div>
-            <div id="inboxDetailAttachment" class="inbox-detail-attachment" style="display: none;"></div>
-            <div id="inboxDetailReplyBox" class="inbox-detail-reply-box" style="display: none;">
-                <label for="inboxDetailReplyInput">Responder comentário</label>
-                <textarea id="inboxDetailReplyInput" placeholder="Digite sua resposta..." maxlength="500"></textarea>
-                <div class="inbox-detail-reply-actions">
-                    <span id="inboxDetailReplyCount">0/500</span>
-                    <button type="button" id="inboxDetailReplyBtn" class="btn-secondary">Responder</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="notificationToast"></div>
-    <footer>
+    
         <div class="container">
             <p>&copy; 2025 HOLIDAY Guild. Todos os direitos reservados.</p>
             <p>Grupo Guild Holiday criado em 2014</p>
@@ -823,13 +158,9 @@
     </footer>
 
     <script src="site-config.js"></script>
-    <script src="auth-api.js?v=20261122-account-motion-1"></script>
+    <script src="auth-api.js?v=20261114-1"></script>
     <script src="auth-manager.js"></script>
-    <script src="profile-animation-preferences.js?v=20261122-account-motion-2"></script>
-    <script src="navigation.js?v=20261114-navbar-icons-1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-    <script src="profile.js?v=20261125-2fa-remember-days-1"></script>
+    <script src="login.js?v=20261125-manual-2fa-email"></script>
+    <script src="google-auth.js?v=20261115-2"></script>
 </body>
 </html>
-
-
