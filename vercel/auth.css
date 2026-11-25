@@ -505,6 +505,25 @@
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.google-signin-button > * {
+    animation: googleSignInFadeIn 0.25s ease-out both;
+}
+
+@keyframes googleSignInFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .google-signin-button > * {
+        animation: none;
+    }
+}
+
 .google-signin-button:has(iframe):hover {
     border-color: rgba(236, 72, 153, 0.78);
     box-shadow: 0 0 20px rgba(236, 72, 153, 0.2);
