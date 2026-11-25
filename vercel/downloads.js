@@ -2720,7 +2720,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
             return `
             <div class="download-link-entry">
                 <a href="${escapeHtml(linkItem.url)}" target="_blank" rel="noopener noreferrer" class="btn-download${extraClass}" style="display: inline-flex; align-items: center; justify-content: center; min-height: 34px; margin: 0; font-size: 12px; line-height: 1;">${escapeHtml(buttonLabel)}</a>
-                <button type="button" class="btn-virus-scan" data-download-id="${Number(download.id) || 0}" data-link-index="${idx}" aria-describedby="${scanTooltipId}">Examinar vírus</button>
+                <button type="button" class="btn-virus-scan" data-download-id="${Number(download.id) || 0}" data-link-index="${idx}" aria-describedby="${scanTooltipId}">Examinar link</button>
                 <span class="virus-scan-tooltip" id="${scanTooltipId}" role="tooltip">Esta verificação consulta o link no VirusTotal.</span>
                 <span class="virus-scan-result" data-state="idle" role="status" aria-live="polite" hidden></span>
             </div>
@@ -2843,7 +2843,7 @@ function renderDownloads(downloadsToRender = allDownloads, options = {}) {
                 'O VirusTotal analisa a reputação do link, não o conteúdo do arquivo. Uma ou poucas detecções podem ser falso positivo e não provam que o arquivo seja malicioso. O link pode ficar visível para outras pessoas; continue apenas se for público.',
                 {
                     title: 'Examinar link no VirusTotal?',
-                    confirmText: 'Examinar vírus',
+                    confirmText: 'Examinar link',
                     cancelText: 'Cancelar'
                 }
             );
