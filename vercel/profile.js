@@ -4059,6 +4059,7 @@ async function loadProfile() {
         // Mostrar conteedo IMEDIATAMENTE
         document.getElementById('loadingScreen').style.display = 'none';
         document.getElementById('profileContent').style.display = 'block';
+        renderRankHistory();
         
         console.log('[PROFILE] profileContent is now visible');
         
@@ -4307,9 +4308,9 @@ async function renderProfileData(result) {
             console.log('✅ OK: "Membro Novato" NÃO está em currentCustomRanks');
         }
 
-        // NÃO renderizar histórico aqui - deixar para loadCustomRanks() fazer isso
-        // quando os dados estiverem prontos
-        console.log('[renderProfileData] Deferring rank history rendering to loadCustomRanks()...');
+        // loadProfile renderiza o histórico inicial antes do primeiro paint.
+        // loadCustomRanks() atualiza a lista quando os dados adicionais chegam.
+        console.log('[renderProfileData] Rank history will render from loadProfile...');
         
         // Form data
         const editProfileTagline = document.getElementById('editProfileTagline');
@@ -9643,12 +9644,12 @@ async function loadTwoFactorStatus() {
                 if (normalizedOptions.length > 0) {
                     els.rememberDaysSelect.innerHTML = normalizedOptions
                         .map((days) => days === 0
-                            ? '<option value="0">Desativado</option>'
+                            ? '<option value="0">Desativado (pedir sempre)</option>'
                             : `<option value="${days}">${days} dias</option>`)
                         .join('');
                 }
 
-                const selectedDays = Number(result.rememberDays || 3);
+                const selectedDays = Number(result.rememberDays ?? 3);
                 els.rememberDaysSelect.value = String(
                     normalizedOptions.includes(selectedDays) ? selectedDays : (normalizedOptions[0] || 3)
                 );
@@ -9662,7 +9663,7 @@ async function loadTwoFactorStatus() {
 async function saveTwoFactorSettings() {
     resetTwoFactorMessages();
     const els = getTwoFactorElements();
-    const rememberDays = Number(els.rememberDaysSelect?.value || 3);
+    const rememberDays = Number(els.rememberDaysSelect?.value ?? 3);
     if (!Number.isFinite(rememberDays)) {
         setTwoFactorError('Escolha um prazo v\u00e1lido.');
         return;
